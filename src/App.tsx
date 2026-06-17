@@ -3,6 +3,8 @@ import AppShell from './components/layout/AppShell'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/routing/ProtectedRoute'
 import { TransactionProvider } from './context/TransactionsContext'
+import { DialogProvider } from './context/DialogContext'
+import { NotificationsProvider } from './context/NotificationsContext'
 import Home from './pages/Home'
 import AddTransaction from './pages/AddTransaction'
 import EditTransaction from './pages/EditTransaction'
@@ -26,32 +28,36 @@ ProtectedRoute dà il via libera.
 function App() {
   return (
     <AuthProvider>
-      <TransactionProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/auth" element={<AuthPage />} />
+      <DialogProvider>
+        <NotificationsProvider>
+          <TransactionProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/auth" element={<AuthPage />} />
 
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <AppShell />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Navigate to="/home" replace />} />
-              <Route path="home" element={<Home />} />
-              <Route path="analytics" element={<Analytics />} />
-              <Route path="profile" element={<Profile />} />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <AppShell />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<Navigate to="/home" replace />} />
+                  <Route path="home" element={<Home />} />
+                  <Route path="analytics" element={<Analytics />} />
+                  <Route path="profile" element={<Profile />} />
 
-              <Route path="add" element={<AddTransaction />} />
-              <Route path="/transactions/:id/edit" element={<EditTransaction />} />
-            </Route>
+                  <Route path="add" element={<AddTransaction />} />
+                  <Route path="/transactions/:id/edit" element={<EditTransaction />} />
+                </Route>
 
-            <Route path="*" element={<Navigate to="/home" replace />} />
-          </Routes>
-        </BrowserRouter>
-      </TransactionProvider>
+                <Route path="*" element={<Navigate to="/home" replace />} />
+              </Routes>
+            </BrowserRouter>
+          </TransactionProvider>
+        </NotificationsProvider>
+      </DialogProvider>
     </AuthProvider>
   )
 }

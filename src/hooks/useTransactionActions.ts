@@ -3,6 +3,7 @@ import {
   deleteTransaction,
   updateTransaction,
 } from '../services/transactionsService'
+import { useDialog } from '../context/DialogContext'
 import type { Transaction, ParticipantStatus } from '../types/types'
 
 export function useTransactionActions(
@@ -10,6 +11,7 @@ export function useTransactionActions(
   currentUserId?: string
 ) {
   const navigate = useNavigate()
+  const { showAlert, showConfirm } = useDialog()
 
   async function handleDeleteTransaction(transactionId: string) {
     try {
@@ -19,21 +21,22 @@ export function useTransactionActions(
       if (!transactionToDelete || !currentUserId) return
 
       if (!transactionToDelete.participantIds.includes(currentUserId)) {
-        window.alert('Puoi eliminare solo le transazioni in cui sei coinvolto.')
+        await showAlert('Errore', 'Puoi eliminare solo le transazioni in cui sei coinvolto.')
         return
       }
 
       if (transactionToDelete.status === 'pending' && transactionToDelete.createdByUserId !== currentUserId) {
-        window.alert('Solo il creatore può eliminare una transazione in attesa di accettazione.')
+        await showAlert('Errore', 'Solo il creatore può eliminare una transazione in attesa di accettazione.')
         return
       }
 
       if (transactionToDelete.status === 'revision' && transactionToDelete.createdByUserId !== currentUserId) {
-        window.alert('Solo il creatore può eliminare una transazione in revisione.')
+        await showAlert('Errore', 'Solo il creatore può eliminare una transazione in revisione.')
         return
       }
 
-      const confirmDelete = window.confirm(
+      const confirmDelete = await showConfirm(
+        'Elimina transazione',
         'Sei sicuro di voler eliminare questa transazione?'
       )
 
@@ -41,7 +44,7 @@ export function useTransactionActions(
 
       await deleteTransaction(transactionId, currentUserId)
     } catch (err) {
-      window.alert('Eliminazione non riuscita.')
+      await showAlert('Errore', 'Eliminazione non riuscita.')
     }
   }
 
@@ -58,9 +61,9 @@ export function useTransactionActions(
         ...tx,
         participantStatuses: newStatuses,
         status: newStatus,
-      })
+      }, currentUserId)
     } catch (err) {
-      window.alert("Errore durante l'accettazione della transazione.")
+      await showAlert('Errore', "Errore durante l'accettazione della transazione.")
     }
   }
 
@@ -69,7 +72,7 @@ export function useTransactionActions(
       const tx = transactions.find((t) => t.id === transactionId)
       if (!tx || !currentUserId) return
 
-      const confirmReject = window.confirm('Sei sicuro di voler rifiutare questa transazione?')
+      const confirmReject = await showConfirm('Rifiuta Transazione', 'Sei sicuro di voler rifiutare questa transazione?')
       if (!confirmReject) return
 
       const newStatuses = { ...tx.participantStatuses, [currentUserId]: 'rejected' as ParticipantStatus }
@@ -78,13 +81,13 @@ export function useTransactionActions(
         ...tx,
         participantStatuses: newStatuses,
         status: 'revision',
-      })
+      }, currentUserId)
     } catch (err) {
-      window.alert('Errore durante il rifiuto della transazione.')
+      await showAlert('Errore', 'Errore durante il rifiuto della transazione.')
     }
   }
 
-  function handleEditTransaction(transactionId: string) {
+  async function handleEditTransaction(transactionId: string) {
     const transactionToEdit = transactions.find((tx) => tx.id === transactionId) ?? null
 
     if (!transactionToEdit || !currentUserId) {
@@ -92,17 +95,17 @@ export function useTransactionActions(
     }
 
     if (!transactionToEdit.participantIds.includes(currentUserId)) {
-      window.alert('Puoi modificare solo le transazioni in cui sei coinvolto.')
+      await showAlert('Errore', 'Puoi modificare solo le transazioni in cui sei coinvolto.')
       return
     }
 
     if (transactionToEdit.status === 'pending' && transactionToEdit.createdByUserId !== currentUserId) {
-      window.alert('Solo il creatore può modificare una transazione in attesa di accettazione.')
+      await showAlert('Errore', 'Solo il creatore può modificare una transazione in attesa di accettazione.')
       return
     }
     
     if (transactionToEdit.status === 'revision' && transactionToEdit.createdByUserId !== currentUserId) {
-      window.alert('Solo il creatore può modificare una transazione in revisione.')
+      await showAlert('Errore', 'Solo il creatore può modificare una transazione in revisione.')
       return
     }
 

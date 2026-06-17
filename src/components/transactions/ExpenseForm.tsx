@@ -8,7 +8,7 @@ import './TransactionForm.css'
 import SplitManager from './SplitManager'
 import { createExpense, updateExpense } from '../../services/transactionsService'
 import { buildNewExpense } from '../../utils/transactionFactories'
-import { getSuggestedClusters } from '../../utils/transactions'
+import { getSuggestedClusters, getAvailableUsersIds } from '../../utils/transactions'
 
 // Helper per gestire in modo pulito il salvataggio ottimistico
 // senza dover ripetere la logica if/else in ogni punto di salvataggio.
@@ -155,19 +155,25 @@ export default function ExpenseForm({
     // --- GESTIONE ACCETTAZIONE PREVENTIVA ---
     const participantStatuses: Record<string, 'accepted' | 'pending' | 'rejected'> = {}
     
+    const activeUserIds = getAvailableUsersIds(userTransactions)
+    
     selectedParticipants.forEach(user => {
       if (user.id === currentUser.id) {
         participantStatuses[user.id] = 'accepted' // Il creatore/utente corrente accetta sempre
-      } else if (knownParticipants.some(ku => ku.id === user.id)) {
-        participantStatuses[user.id] = 'accepted' // Gli amici già noti vengono auto-accettati per evitare attrito
-      } else {
-        // È un utente "nuovo" (non ancora noto)
-        if (initialTransaction?.participantStatuses && initialTransaction.participantStatuses[user.id] === 'accepted') {
-          // Se aveva già accettato la versione precedente (e non era lui ad aver rifiutato), manteniamo la sua accettazione
-          participantStatuses[user.id] = 'accepted'
+      } else if (initialTransaction && initialTransaction.participantStatuses[user.id]) {
+        // Se l'utente era già presente, valutiamo il suo stato precedente
+        const prevStatus = initialTransaction.participantStatuses[user.id]
+        if (prevStatus === 'rejected' || prevStatus === 'pending') {
+          // Se aveva rifiutato, la modifica di X serve a correggere: torna in pending
+          participantStatuses[user.id] = 'pending'
         } else {
-          // Se era in 'pending', rimane in 'pending'.
-          // Se aveva 'rejected', il creatore ha appena corretto l'errore: l'utente torna in 'pending' per valutare la correzione.
+          participantStatuses[user.id] = 'accepted'
+        }
+      } else {
+        // È un utente "nuovo" (non ancora noto tramite transazioni attive)
+        if (activeUserIds.includes(user.id)) {
+          participantStatuses[user.id] = 'accepted' // Noto
+        } else {
           participantStatuses[user.id] = 'pending'
         }
       }
@@ -230,7 +236,7 @@ export default function ExpenseForm({
           editLogs: updatedLogs,
         }
         // Eseguiamo il salvataggio sfruttando l'helper
-        await executeOptimisticWrite(updateExpense(updatedPayload))
+        await executeOptimisticWrite(updateExpense(updatedPayload, currentUser.id))
       } else {
         // --- RAMO CREATE ---
         const payload = buildNewExpense({

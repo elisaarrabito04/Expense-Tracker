@@ -1,10 +1,16 @@
+import { useState } from 'react';
 import BellIcon from '../../assets/bell.svg?react';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import { useNotifications } from '../../context/NotificationsContext';
+import NotificationsDropdown from './NotificationsDropdown';
 import './TopBar.css';
 
 export default function TopBar() {
   const isOnline = useNetworkStatus()
   const isOffline = !isOnline
+  
+  const { unreadCount } = useNotifications()
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   return (
     <header className="top-bar">
@@ -22,13 +28,29 @@ export default function TopBar() {
               Offline
             </div>
           )}
-          <button
-            type="button"
-            className="top-bar__icon-button"
-            aria-label="Notifiche"
-          >
-            <BellIcon className="top-bar__icon" />
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              className="top-bar__icon-button"
+              aria-label="Notifiche"
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              style={{ position: 'relative' }}
+            >
+              <BellIcon className="top-bar__icon" />
+              {unreadCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: '0', right: '0',
+                  backgroundColor: '#e03131', color: 'white',
+                  fontSize: '0.65rem', fontWeight: 'bold',
+                  minWidth: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: '50%', transform: 'translate(25%, -25%)'
+                }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
+            <NotificationsDropdown isOpen={isDropdownOpen} onClose={() => setIsDropdownOpen(false)} />
+          </div>
         </div>
       </div>
     </header>

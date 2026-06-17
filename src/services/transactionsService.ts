@@ -1,5 +1,4 @@
 import {
-  addDoc,
   collection,
   doc,
   getDoc,
@@ -7,9 +6,9 @@ import {
   orderBy,
   query,
   serverTimestamp,
-  updateDoc,
   where,
   onSnapshot,
+  writeBatch,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
@@ -20,6 +19,8 @@ import type {
   Transaction,
   NewExpenseTransaction,
   NewSettlementTransaction,
+  AppNotification,
+  NotificationType,
 } from '../types/types'
 
 // -----------------------------------------------------------------------------
@@ -54,6 +55,7 @@ function assertPositiveAmount(amount: number): void {
   }
 }
 
+
 // -----------------------------------------------------------------------------
 // HELPERS DOMINIO
 // -----------------------------------------------------------------------------
@@ -81,6 +83,30 @@ export function buildSettlementParticipantIds(
 ): string[] {
   return uniqueIds([createdByUserId, fromUserId, toUserId])
 }
+
+// HELPER: Crea una notifica all'interno di un batch
+function addNotificationToBatch(
+  batch: any, // Usiamo un tipo generico per il batch per flessibilità, ma è WriteBatch
+  targetUserId: string,
+  type: NotificationType,
+  txId: string,
+  txTitle: string,
+  actorId: string
+) {
+  const notifRef = doc(collection(db, 'users', targetUserId, 'notifications'))
+  const notification: AppNotification = {
+    id: notifRef.id,
+    type,
+    txId,
+    txTitle,
+    actorId,
+    read: false,
+    createdAt: new Date().toISOString(), // Usiamo ISO string locale per uniformità offline/online
+  }
+  batch.set(notifRef, notification)
+}
+
+
 
 // Validazione minima per spese.
 // Qui non faccio una validazione “perfetta” di tutto il dominio,
@@ -292,6 +318,9 @@ export async function getKnownParticipantIdsForUser(
 // SCRITTURA - CREATE
 // -----------------------------------------------------------------------------
 
+
+
+
 // Crea una expense su Firestore.
 // Ricostruisco participantIds lato service per evitare di fidarmi ciecamente della UI.
 export async function createExpense(
@@ -322,7 +351,20 @@ export async function createExpense(
     updatedAt: serverTimestamp(),
   }
 
-  await addDoc(collection(db, TRANSACTIONS_COLLECTION), payload)
+  // 4. Batch Write: Transazione + Notifiche
+  const batch = writeBatch(db)
+  const txRef = doc(collection(db, TRANSACTIONS_COLLECTION))
+  
+  batch.set(txRef, payload)
+
+  // Invio notifica 'added' a tutti tranne al creatore
+  participantIds.forEach((userId) => {
+    if (userId !== newTransactionData.createdByUserId) {
+      addNotificationToBatch(batch, userId, 'added', txRef.id, newTransactionData.description, newTransactionData.createdByUserId)
+    }
+  })
+
+  await batch.commit()
 }
 
 // Crea un settlement su Firestore.
@@ -348,7 +390,19 @@ export async function createSettlement(
     updatedAt: serverTimestamp(),
   }
 
-  await addDoc(collection(db, TRANSACTIONS_COLLECTION), payload)
+  const batch = writeBatch(db)
+  const txRef = doc(collection(db, TRANSACTIONS_COLLECTION))
+  
+  batch.set(txRef, payload)
+
+  // Invio notifica 'added' a tutti tranne al creatore
+  participantIds.forEach((userId) => {
+    if (userId !== newTransactionData.createdByUserId) {
+      addNotificationToBatch(batch, userId, 'added', txRef.id, newTransactionData.description, newTransactionData.createdByUserId)
+    }
+  })
+
+  await batch.commit()
 }
 
 // -----------------------------------------------------------------------------
@@ -358,7 +412,8 @@ export async function createSettlement(
 // Aggiorna una expense esistente.
 // Anche qui ricostruisco participantIds per mantenere coerenza nel feed personale.
 export async function updateExpense(
-  updatedTransaction: ExpenseTransaction
+  updatedTransaction: ExpenseTransaction,
+  updaterId: string
 ): Promise<void> {
   assertNonEmptyString(updatedTransaction.id, 'id')
   validateExpense(updatedTransaction)
@@ -369,19 +424,63 @@ export async function updateExpense(
     updatedTransaction.shares
   )
 
+  // RECUPERO LA VECCHIA TRANSAZIONE PER CALCOLARE I DIFF SUI PARTECIPANTI
+  const oldTx = await getTransactionById(updatedTransaction.id)
+  if (!oldTx) throw new Error("Transazione non trovata")
+
+  const oldParticipantIds = new Set(oldTx.participantIds)
+  const newParticipantIds = new Set(participantIds)
+
   const { id, ...rest } = updatedTransaction
 
-  await updateDoc(doc(db, TRANSACTIONS_COLLECTION, id), {
+  const batch = writeBatch(db)
+  const txRef = doc(db, TRANSACTIONS_COLLECTION, id)
+
+  batch.update(txRef, {
     ...rest,
     tagId: updatedTransaction.tagId ?? null,
     participantIds,
     updatedAt: serverTimestamp(),
   })
+
+  // CALCOLO NOTIFICHE
+  const isStatusChangeOnly = updaterId !== updatedTransaction.createdByUserId && 
+    oldTx.participantStatuses[updaterId] !== updatedTransaction.participantStatuses[updaterId];
+
+  participantIds.forEach((userId) => {
+    if (userId === updaterId) return // Non auto-notificarsi!
+
+    if (isStatusChangeOnly) {
+      // È solo un accetta/rifiuta. Avvisiamo SOLO il creatore e ignoriamo gli altri.
+      if (userId === updatedTransaction.createdByUserId) {
+        const newStatus = updatedTransaction.participantStatuses[updaterId]
+        if (newStatus === 'accepted' || newStatus === 'rejected') {
+          addNotificationToBatch(batch, userId, newStatus, id, updatedTransaction.description, updaterId)
+        }
+      }
+      return 
+    }
+
+    // Se è una vera modifica ai dati della transazione
+    if (!oldParticipantIds.has(userId)) {
+      addNotificationToBatch(batch, userId, 'added', id, updatedTransaction.description, updaterId)
+    } else {
+      addNotificationToBatch(batch, userId, 'modified', id, updatedTransaction.description, updaterId)
+    }
+  })
+  oldTx.participantIds.forEach((userId) => {
+    if (userId !== updaterId && !newParticipantIds.has(userId)) {
+      addNotificationToBatch(batch, userId, 'removed', id, oldTx.description, updaterId)
+    }
+  })
+
+  await batch.commit()
 }
 
 // Aggiorna un settlement esistente.
 export async function updateSettlement(
-  updatedTransaction: SettlementTransaction
+  updatedTransaction: SettlementTransaction,
+  updaterId: string
 ): Promise<void> {
   assertNonEmptyString(updatedTransaction.id, 'id')
   validateSettlement(updatedTransaction)
@@ -392,23 +491,50 @@ export async function updateSettlement(
     updatedTransaction.toUserId
   )
 
+  const oldTx = await getTransactionById(updatedTransaction.id)
+  if (!oldTx) throw new Error("Transazione non trovata")
+  
   const { id, ...rest } = updatedTransaction
 
-  await updateDoc(doc(db, TRANSACTIONS_COLLECTION, id), {
+  const batch = writeBatch(db)
+  const txRef = doc(db, TRANSACTIONS_COLLECTION, id)
+
+  batch.update(txRef, {
     ...rest,
     participantIds,
     updatedAt: serverTimestamp(),
   })
+
+  const isStatusChangeOnly = updaterId !== updatedTransaction.createdByUserId && 
+    oldTx.participantStatuses[updaterId] !== updatedTransaction.participantStatuses[updaterId];
+
+  participantIds.forEach((userId) => {
+    if (userId === updaterId) return // Non auto-notificarsi!
+
+    if (isStatusChangeOnly) {
+      if (userId === updatedTransaction.createdByUserId) {
+        const newStatus = updatedTransaction.participantStatuses[updaterId]
+        if (newStatus === 'accepted' || newStatus === 'rejected') {
+          addNotificationToBatch(batch, userId, newStatus, id, updatedTransaction.description, updaterId)
+        }
+      }
+      return
+    }
+
+    addNotificationToBatch(batch, userId, 'modified', id, updatedTransaction.description, updaterId)
+  })
+
+  await batch.commit()
 }
 
 // fa dispatch del tipo di update
-export async function updateTransaction(transaction: Transaction): Promise<void> {
+export async function updateTransaction(transaction: Transaction, updaterId: string): Promise<void> {
   if (transaction.type === 'expense') {
-    await updateExpense(transaction)
+    await updateExpense(transaction, updaterId)
     return
   }
 
-  await updateSettlement(transaction)
+  await updateSettlement(transaction, updaterId)
 }
 
 // -----------------------------------------------------------------------------
@@ -421,9 +547,23 @@ export async function deleteTransaction(transactionId: string, currentUserId: st
   assertNonEmptyString(transactionId, 'transactionId')
   assertNonEmptyString(currentUserId, 'currentUserId')
 
-  await updateDoc(doc(db, TRANSACTIONS_COLLECTION, transactionId), {
+  const oldTx = await getTransactionById(transactionId)
+  if (!oldTx) return
+
+  const batch = writeBatch(db)
+  const txRef = doc(db, TRANSACTIONS_COLLECTION, transactionId)
+
+  batch.update(txRef, {
     status: 'deleted',
     deletedAt: serverTimestamp(),
     deletedByUserId: currentUserId,
   })
+
+  oldTx.participantIds.forEach((userId) => {
+    if (userId !== currentUserId) {
+      addNotificationToBatch(batch, userId, 'deleted', transactionId, oldTx.description, currentUserId)
+    }
+  })
+
+  await batch.commit()
 }

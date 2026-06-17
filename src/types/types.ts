@@ -1,4 +1,14 @@
-// src/types/index.ts
+export type NotificationType = 'added' | 'modified' | 'removed' | 'deleted' | 'accepted' | 'rejected'
+
+export type AppNotification = {
+  id: string
+  type: NotificationType
+  txId: string
+  txTitle: string // Salviamo il titolo per avere contesto se la tx viene eliminata!
+  actorId: string // Chi ha scatenato la notifica
+  read: boolean
+  createdAt: string
+}
 
 // -----------------------------------------------------------------------------
 // UTENTI

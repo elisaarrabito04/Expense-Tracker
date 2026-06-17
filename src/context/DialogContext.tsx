@@ -1,5 +1,3 @@
-/* DOVREI ANCORA INSERIRLO IN APP.TSX e usarlo nell'hook transactionsActions */
-
 /*
   useCallback è un hook di ottimizzazione delle performance di React. Il suo scopo è mantenere in memoria (memoizzare) la stessa identica funzione tra un render e l'altro.
  In questo file, showAlert e showConfirm sono dichiarate dentro il componente DialogProvider. 
@@ -11,7 +9,7 @@
 */
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
-import '../Dialog.css'
+import './Dialog.css'
 
 type DialogType = 'alert' | 'confirm'
 

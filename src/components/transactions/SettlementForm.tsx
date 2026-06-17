@@ -4,6 +4,8 @@ import SingleUserSelector from './SingleUserSelector'
 import { createSettlement, updateSettlement } from '../../services/transactionsService'
 import { buildNewSettlement } from '../../utils/transactionFactories'
 import { getUserById } from '../../services/usersService'
+import { useTransactions } from '../../context/TransactionsContext'
+import { getAvailableUsersIds } from '../../utils/transactions'
 
 // Helper per gestire in modo pulito il salvataggio ottimistico
 // senza dover ripetere la logica if/else in ogni punto di salvataggio.
@@ -40,6 +42,8 @@ export default function SettlementForm({
   isSyncing,
   onCancel,
 }: SettlementFormProps) {
+  const { userTransactions } = useTransactions()
+
   // --- INIZIALIZZAZIONE DEGLI STATI ---
   // Il callback in useState determina il prefill iniziale.
   const [amount, setAmount] = useState<string>(() => {
@@ -114,13 +118,22 @@ export default function SettlementForm({
     // L'utente che compila il form accetta sempre
     participantStatuses[currentUser.id] = 'accepted'
 
+    const activeUserIds = getAvailableUsersIds(userTransactions)
+
     // Gestiamo lo stato dell'altro utente
-    if (initialTransaction?.participantStatuses && initialTransaction.participantStatuses[otherUser.id]) {
-      participantStatuses[otherUser.id] = initialTransaction.participantStatuses[otherUser.id]
-    } else if (!knownParticipants.some(ku => ku.id === otherUser.id)) {
-      participantStatuses[otherUser.id] = 'pending'
+    if (initialTransaction && initialTransaction.participantStatuses[otherUser.id]) {
+      const prevStatus = initialTransaction.participantStatuses[otherUser.id]
+      if (prevStatus === 'rejected' || prevStatus === 'pending') {
+        participantStatuses[otherUser.id] = 'pending'
+      } else {
+        participantStatuses[otherUser.id] = 'accepted'
+      }
     } else {
-      participantStatuses[otherUser.id] = 'accepted'
+      if (activeUserIds.includes(otherUser.id)) {
+        participantStatuses[otherUser.id] = 'accepted'
+      } else {
+        participantStatuses[otherUser.id] = 'pending'
+      }
     }
 
     const statusesArray = Object.values(participantStatuses)
@@ -163,7 +176,7 @@ export default function SettlementForm({
         }
 
         // Eseguiamo l'aggiornamento sfruttando l'helper
-        await executeOptimisticWrite(updateSettlement(updatedPayload))
+        await executeOptimisticWrite(updateSettlement(updatedPayload, currentUser.id))
       } else {
         const payload = buildNewSettlement({
           amount: numericAmount,

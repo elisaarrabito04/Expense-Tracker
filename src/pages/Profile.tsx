@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTransactions } from '../context/TransactionsContext'
 import { getUserBalancesByPerson, formatCurrency } from '../utils/transactions'
 import { useNetworkStatus } from '../hooks/useNetworkStatus'
+import { useDialog } from '../context/DialogContext'
 import type { AppUser } from '../types/types'
 
 import './Profile.css'
@@ -20,6 +21,7 @@ export default function Profile() {
     isLoading,
     error
   } = useTransactions()
+  const { showAlert } = useDialog()
 
   // Stati per la gestione della modifica profilo
   const [isEditing, setIsEditing] = useState(false)
@@ -64,7 +66,7 @@ export default function Profile() {
       navigate('/auth', { replace: true })
     } catch (error) {
       console.error('Errore durante il logout:', error)
-      window.alert('Logout non riuscito. Riprova.')
+      await showAlert('Errore', 'Logout non riuscito. Riprova.')
     }
   }
 
