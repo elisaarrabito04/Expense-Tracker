@@ -1,0 +1,155 @@
+.profile-page {
+  padding: 1rem;
+  padding-bottom: 80px;
+}
+
+.profile-message {
+  padding: 1rem;
+}
+
+.profile-header {
+  margin-bottom: 1.5rem;
+}
+
+.profile-title {
+  margin-bottom: 0.25rem;
+}
+
+.profile-subtitle {
+  margin: 0;
+  color: #666;
+}
+
+.profile-settled-text {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.balance-positive {
+  color: green;
+}
+
+.balance-negative {
+  color: #b42318;
+}
+
+.profile-error {
+  color: #b42318;
+}
+
+.profile-empty {
+  color: #666;
+}
+
+.pending-balances-list {
+  list-style: none;
+  padding: 0;
+}
+
+.pending-balance-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  background: #fff;
+}
+
+.pending-balance-name {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.pending-balance-amount {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.settle-btn {
+  width: auto;
+  padding: 0.5rem 1rem;
+  margin: 0;
+}
+
+/* --- EDIT PROFILE FORM --- */
+
+.profile-edit-form {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #eee;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.profile-edit-form .form-group {
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.profile-edit-form label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.profile-edit-form input {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.profile-edit-form input:focus {
+  outline: none;
+  border-color: #339af0;
+  box-shadow: 0 0 0 3px rgba(51, 154, 240, 0.15);
+}
+
+.profile-edit-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 1.5rem;
+  justify-content: center;
+}
+
+.profile-nickname {
+  margin: 0.5rem 0;
+  font-weight: 500;
+  color: #868e96;
+}
+
+.cancel-btn {
+  background-color: #dc3545 !important;
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background-color: #c82333 !important;
+}
+
+.profile-edit-btn {
+  margin-top: 1rem;
+  padding: 0.6rem 1.2rem;
+  background-color: #f8f9fa;
+  color: #495057;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.profile-edit-btn:hover {
+  background-color: #e9ecef;
+  color: #212529;
+}

@@ -1,0 +1,21 @@
+.transaction-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.transaction-list--empty {
+  padding: 1rem;
+  border: 1px dashed #d8d8d8;
+  border-radius: 16px;
+  background-color: #fafafa;
+}
+
+.transaction-list__empty-message {
+  margin: 0;
+  color: #6f6f6f;
+  font-size: 0.95rem;
+}

@@ -1,0 +1,44 @@
+.bottom-navbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #ffffff;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  z-index: 1000;
+}
+
+.bottom-navbar__inner {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px 0;
+  max-width: 600px; /* Adatta questo valore per farlo coincidere con il CSS della top-bar */
+  margin: 0 auto;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: #9ca3af; /* Colore BASE (inattivo): un grigio spento */
+  transition: color 0.2s ease-in-out;
+}
+
+.nav-icon {
+  width: 24px;
+  height: 24px;
+  margin-bottom: 4px;
+}
+
+.nav-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Quando ci troviamo nella pagina corretta, cambiamo il colore del genitore.
+   Se l'SVG è ben configurato, diventerà automaticamente blu insieme al testo. */
+.nav-item.active {
+  color: #3b82f6; /* Colore ATTIVO: es. un blu vivace */
+}

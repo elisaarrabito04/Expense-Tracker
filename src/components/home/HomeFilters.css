@@ -1,0 +1,318 @@
+.home-filters {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.home-filters__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f1f1f;
+}
+
+.home-filters-layout {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+.home-filters-layout--dates-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.home-filters-layout--type-row {
+  grid-template-columns: 1fr;
+}
+
+.filter-field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* per i campi data voglio una label sopra e il controllo sotto, con meno spazio verticale */
+.filter-field--date {
+  gap: 0.35rem;
+}
+
+/* label piccola sopra ai campi data ("Data inizio", "Data fine")
+   la tengo coerente col resto della UI e non troppo invasiva */
+.filter-field__label {
+  margin: 0;
+  padding: 0 0.2rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #6b6b6b;
+}
+
+.filter-field__hint {
+  margin: 0.35rem 0 0;
+  padding: 0 0.2rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: #6b6b6b;
+}
+
+.filter-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 0.9rem;
+  background-color: #f7f7f8;
+  border: 1px solid #d8d8dc;
+  border-radius: 16px;
+  box-sizing: border-box;
+
+  /* così input e button ereditano meglio il font usato nel resto della UI */
+  font: inherit;
+  color: #222;
+}
+
+.filter-search__icon {
+  flex-shrink: 0;
+  color: #6f6f6f;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.filter-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+
+  /* eredità esplicita per evitare differenze con i controlli nativi */
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  color: inherit;
+}
+
+.filter-search input::placeholder {
+  color: #8b8b8b;
+}
+
+.filter-search:focus-within {
+  border-color: #b7b7bc;
+  background-color: #fbfbfc;
+  box-shadow: 0 0 0 3px rgba(20, 20, 20, 0.05);
+}
+
+.filter-search--date {
+  min-width: 0; /* altrimenti l’input mantiene spesso una larghezza minima che rovina il layout*/
+  justify-content: space-between;
+}
+
+.filter-search--date input[type='date'] {
+  width: 100%;
+  min-width: 0;
+  appearance: none;
+  -webkit-appearance: none;
+
+  /* provo a uniformare il più possibile il controllo data al resto dei campi */
+  font: inherit;
+  font-size: 0.95rem;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: 1.2;
+  letter-spacing: inherit;
+  color: inherit;
+}
+
+/* su browser webkit/blink il date input ha sottoparti native:
+   forzo anche lì il font per ridurre l'effetto "font diverso dal resto della UI" */
+.filter-search--date input[type='date']::-webkit-datetime-edit,
+.filter-search--date input[type='date']::-webkit-datetime-edit-year-field,
+.filter-search--date input[type='date']::-webkit-datetime-edit-month-field,
+.filter-search--date input[type='date']::-webkit-datetime-edit-day-field,
+.filter-search--date input[type='date']::-webkit-datetime-edit-text {
+  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+/* nascondere la parte “ingombrante” del controllo nativo e lasciare che il testo si adatti meglio*/
+.filter-search--date input[type='date']::-webkit-calendar-picker-indicator {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+/* nascondere la parte “ingombrante” del controllo nativo e lasciare che il testo si adatti meglio*/
+.filter-search--date input[type='date']::-webkit-datetime-edit {
+  min-width: 0;
+}
+
+/* se vuoi nascondere la scritta guida nativa tipo "gg/mm/aaaa" quando il campo è vuoto,
+   puoi usare questa regola. Funziona meglio se l'input ha required.
+   Se preferisci lasciarla visibile, puoi rimuovere questo blocco. */
+.filter-search--date input[type='date']:not(:focus):invalid::-webkit-datetime-edit,
+.filter-search--date input[type='date']:not(:focus):invalid::-webkit-datetime-edit-year-field,
+.filter-search--date input[type='date']:not(:focus):invalid::-webkit-datetime-edit-month-field,
+.filter-search--date input[type='date']:not(:focus):invalid::-webkit-datetime-edit-day-field,
+.filter-search--date input[type='date']:not(:focus):invalid::-webkit-datetime-edit-text {
+  color: transparent;
+}
+
+.filter-search--button {
+  width: 100%;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.filter-search--type {
+  font-size: 0.95rem;
+  color: #222;
+}
+
+.filter-search__text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.filter-search__chevron {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  color: #6f6f6f;
+}
+
+.selected-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.selected-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 36px;
+  padding: 0 0.9rem;
+  border: none;
+  border-radius: 999px;
+  background-color: #0f1f44;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* in realtà non credo serva se è app mobile */
+.selected-filter-chip:hover {
+  background-color: #162a5a;
+}
+
+.filter-chip {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #b6cdfa;
+  border-radius: 999px;
+  background: #eef4ff;
+  cursor: pointer;
+}
+
+.clear-all-btn {
+  padding: 0.4rem 0.8rem;
+  border: 1px dashed #999;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.filter-dropdown {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 0.35rem;
+  background-color: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+
+  /* uniformità tipografica con il resto della UI */
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  color: #1f1f1f;
+}
+
+.filter-dropdown--type {
+  min-width: 100%;
+}
+
+.filter-dropdown__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.75rem 0.85rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+
+  /* uniformità tipografica con input e bottoni dei filtri */
+  font: inherit;
+  color: inherit;
+}
+
+.filter-dropdown__item:hover {
+  background-color: #f3f3f3;
+}
+
+.filter-dropdown__empty {
+  margin: 0;
+  padding: 0.85rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: #7a7a7a;
+}
+
+.filter-search--disabled {
+  opacity: 0.7;
+}
+
+.filter-dropdown__item--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.filter-dropdown__item--disabled:hover {
+  background-color: transparent;
+}
+
+.filter-dropdown__hint {
+  margin: 0;
+  padding: 0.5rem 0.85rem 0.25rem;
+  font: inherit;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: #6b6b6b;
+}

@@ -1,0 +1,258 @@
+.analytics-page {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #f8fafc;
+  min-height: 100%;
+}
+
+/* Header pagina */
+.analytics-page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.analytics-page-title {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.1;
+  color: #0f172a;
+}
+
+/* Sezioni principali rese come card */
+.analytics-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.analytics-section-header {
+  margin-bottom: 14px;
+}
+
+.analytics-section-title {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+
+.analytics-section-description {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+/* Filtri */
+.analytics-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.analytics-filter-group label {
+  display: block;
+  margin-bottom: 6px;
+  padding: 0 0.2rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #6b6b6b;
+  line-height: 1.2;
+}
+
+.analytics-filter-select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 2.5rem 0 0.9rem;
+  border-radius: 16px;
+  border: 1px solid #d8d8dc;
+  background-color: #f7f7f8;
+  color: #222;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236f6f6f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  background-size: 1rem;
+}
+
+.analytics-filter-select:focus {
+  outline: none;
+  border-color: #b7b7bc;
+  background-color: #fbfbfc;
+  box-shadow: 0 0 0 3px rgba(20, 20, 20, 0.05);
+}
+
+.analytics-filter-select:disabled {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.analytics-filter-select--year {
+  min-width: 100px;
+}
+
+.analytics-filter-select--month {
+  min-width: 140px;
+}
+
+/* Recap mensile */
+.analytics-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.analytics-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.analytics-summary-card--primary {
+  background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+  border-color: transparent;
+}
+
+.analytics-summary-card--primary .analytics-summary-card-label,
+.analytics-summary-card--primary .analytics-summary-card-value {
+  color: #ffffff;
+}
+
+.analytics-summary-card-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.analytics-summary-card-value {
+  font-size: 1.45rem;
+  line-height: 1.1;
+  color: #0f172a;
+}
+
+/* Grafici */
+.analytics-chart-container {
+  width: 100%;
+}
+
+.analytics-chart-container--pie {
+  height: 300px;
+}
+
+.analytics-chart-container--bar {
+  height: 320px;
+}
+
+/* Legenda */
+.analytics-legend {
+  list-style-type: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.analytics-legend-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.analytics-legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.analytics-legend-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.analytics-legend-name {
+  font-weight: 700;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.analytics-legend-values {
+  font-size: 0.92rem;
+  color: #64748b;
+}
+
+/* Stati informativi */
+.analytics-empty-state,
+.analytics-state {
+  padding: 16px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  color: #475569;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.analytics-state--error {
+  color: #991b1b;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  .analytics-summary-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .analytics-page {
+    padding: 14px;
+    gap: 16px;
+  }
+
+  .analytics-section {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .analytics-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-page-title {
+    font-size: 1.5rem;
+  }
+
+  .analytics-chart-container--pie {
+    height: 260px;
+  }
+
+  .analytics-chart-container--bar {
+    height: 280px;
+  }
+}

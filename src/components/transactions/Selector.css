@@ -1,0 +1,398 @@
+/* evita che padding e bordo facciano sforare gli elementi */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+
+/* Container principale */
+.input-with-dropdown {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  /* mi assicuro che tutto il blocco erediti il font corretto della UI */
+  font-family: inherit;
+}
+
+
+/* input principali usati per tag locali e ricerca partecipanti */
+.local-tag-input,
+.participant-search-input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.8rem;
+  border: 1px solid #ced4da;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 1rem;
+  color: #212529;
+  background-color: #ffffff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+
+.local-tag-input:focus,
+.participant-search-input:focus {
+  outline: none;
+  border-color: #339af0;
+  box-shadow: 0 0 0 3px rgba(51, 154, 240, 0.15);
+}
+
+
+/* Chips per i Tag/Partecipanti selezionati
+   li rendo volutamente coerenti: stessa altezza, stesso font, stesso peso visivo.
+   Prendo come riferimento i chip tag che nella UI risultano più puliti. */
+.selected-tag-chip,
+.participant-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 36px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0 0.8rem;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  box-sizing: border-box;
+  border: 1px solid #d0ebff;
+  background-color: #e7f5ff;
+  color: #1971c2;
+}
+
+
+/* Grid per le "pillole" dei partecipanti */
+.transaction-pill-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  min-width: 0;
+}
+
+
+/* Pillola/Chip del singolo partecipante
+   resta cliccabile, ma esteticamente è allineata ai tag */
+.participant-pill {
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+
+.participant-pill:hover {
+  background-color: #d0ebff;
+  border-color: #b6e0fe;
+}
+
+
+/* avatar più compatto, così il chip non sembra più "grosso" del tag */
+.participant-pill__avatar,
+.single-user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background-color: #a5d8ff;
+  color: #1864ab;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+
+/* simbolo di rimozione coerente tra tag e partecipanti */
+.participant-pill-remove {
+  color: #74c0fc;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: color 0.2s;
+  margin-left: 0.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+
+.participant-pill:hover .participant-pill-remove {
+  color: #1864ab;
+}
+
+
+/* Stili per SingleUserSelector */
+.remove-tag-btn.single-user-remove {
+  margin-left: 0.1rem;
+}
+
+
+.remove-tag-btn {
+  background: none;
+  border: none;
+  color: #74c0fc;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+
+.remove-tag-btn:hover {
+  color: #1864ab;
+}
+
+
+/* forzo l'ereditarietà del font anche sugli elementi interni ai chip */
+.selected-tag-chip *,
+.participant-pill *,
+.remove-tag-btn * {
+  font: inherit;
+  line-height: 1;
+}
+
+
+/* --- DROPDOWN TENDINA --- */
+.filter-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* uniformità tipografica col resto della UI */
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  color: #343a40;
+}
+
+
+.filter-dropdown__empty {
+  padding: 1rem;
+  color: #868e96;
+  text-align: center;
+  font: inherit;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+
+.filter-dropdown__item {
+  width: 100%;
+  text-align: left;
+  padding: 0.8rem 1rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.95rem;
+  color: #343a40;
+  transition: background-color 0.2s;
+  display: block;
+}
+
+
+.filter-dropdown__item:hover {
+  background-color: #f1f3f5;
+}
+
+
+.filter-dropdown__item--actionable {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0; /* Sovrascrive il padding di .filter-dropdown__item */
+  cursor: default;
+}
+
+
+.filter-dropdown__item--actionable:hover {
+  background-color: transparent; /* L'hover lo gestiamo sui figli */
+}
+
+
+.filter-dropdown__item--actionable span {
+  padding: 0.8rem 1rem;
+  flex-grow: 1;
+  min-width: 0;
+  text-align: left;
+  font: inherit;
+}
+
+
+/* bottone secondario nella tendina per aggiungere rapidamente un partecipante */
+.add-participant-btn {
+  background-color: #e7f5ff;
+  color: #1c7ed6;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-right: 0.8rem;
+  transition: background-color 0.2s;
+  flex-shrink: 0; /* Evita che il bottone si stringa */
+}
+
+
+.add-participant-btn:hover:not(:disabled) {
+  background-color: #d0ebff;
+}
+
+
+.add-participant-btn:disabled {
+  background-color: #f1f3f5;
+  color: #adb5bd;
+  cursor: not-allowed;
+}
+
+
+.dropdown-divider {
+  border: none;
+  border-top: 1px solid #dee2e6;
+  margin: 0;
+}
+
+
+.global-search-btn {
+  width: 100%;
+  text-align: center;
+  padding: 0.8rem 1rem;
+  background: #f8f9fa;
+  border: none;
+  color: #228be6;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+
+.global-search-btn:hover {
+  background: #e9ecef;
+}
+
+
+/* --- BOTTOM SHEET --- */
+.bottom-sheet-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100dvh; /* dynamic viewport height: perfetto per mobile */
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99999; /* valore estremamente alto per forzare la sovrapposizione */
+  display: flex;
+  align-items: flex-end;
+  animation: fadeIn 0.2s ease-out forwards;
+  backdrop-filter: blur(2px);
+}
+
+
+.bottom-sheet-content {
+  background: #ffffff;
+  width: 100%;
+  height: 40vh; /* Fallback per browser datati */
+  height: 40dvh; /* Un buon compromesso: più basso dell'85%, ma abbastanza alto per la tastiera */
+  border-radius: 20px 20px 0 0;
+  padding: 1.5rem;
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); /* Protegge la UI contro l'home indicator di iOS */
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1) forwards;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+
+  /* uniformità tipografica anche nel foglio modale */
+  font-family: inherit;
+}
+
+
+.bottom-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+
+.bottom-sheet-header h3 {
+  margin: 0;
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #212529;
+}
+
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #868e96;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+
+.global-results {
+  flex: 1; /* Il contenitore dei suggerimenti si "stende" fino a riempire il modale */
+  min-height: 0; /* Fondamentale su flex-items per permettere l'overflow interno */
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+}
+
+
+.global-result-item {
+  border-bottom: 1px solid #f1f3f5;
+}
+
+
+.global-result-item:last-child {
+  border-bottom: none;
+}
+
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}

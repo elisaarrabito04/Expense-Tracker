@@ -1,0 +1,266 @@
+.transaction-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background: #ffffff;
+  padding: 1.25rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f1f3f5;
+
+  /* base tipografica del form */
+  font-family: inherit;
+  color: #212529;
+}
+
+
+/* così tutti gli elementi interni partono dallo stesso font */
+.transaction-form * {
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+
+.form-group label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="date"],
+.form-group textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.8rem;
+  border: 1px solid #ced4da;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 1rem;
+  color: #212529;
+  background-color: #ffffff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+
+/* anche il date input nativo va allineato tipograficamente */
+.form-group input[type="date"]::-webkit-datetime-edit,
+.form-group input[type="date"]::-webkit-datetime-edit-year-field,
+.form-group input[type="date"]::-webkit-datetime-edit-month-field,
+.form-group input[type="date"]::-webkit-datetime-edit-day-field,
+.form-group input[type="date"]::-webkit-datetime-edit-text {
+  font: inherit;
+  color: inherit;
+}
+
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #339af0;
+  box-shadow: 0 0 0 3px rgba(51, 154, 240, 0.15);
+}
+
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+
+/* Blocco specifico per enfatizzare l'area tag/partecipanti */
+.expense-specifics {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px dashed #ced4da;
+
+  /* fix per evitare che gli input o dropdown sforino sul mobile */
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+
+.submit-btn {
+  background-color: #228be6;
+  color: white;
+  padding: 1rem;
+  border: none;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  margin-top: 0.5rem;
+}
+
+
+.submit-btn:hover:not(:disabled) {
+  background-color: #1c7ed6;
+}
+
+
+.submit-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+
+.submit-btn:disabled {
+  background-color: #a5d8ff;
+  cursor: not-allowed;
+}
+
+
+.transaction-form__error {
+  color: #e03131;
+  font-size: 0.875rem;
+  background: #ffe3e3;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin: 0;
+  border: 1px solid #ffa8a8;
+}
+
+
+/* --- SPLIT TOGGLE (Equa / Custom) --- */
+.transaction-type-toggle {
+  display: flex;
+  background: #e9ecef;
+  border-radius: 10px;
+  padding: 0.25rem;
+  min-width: 0;
+}
+
+
+.transaction-type-toggle button {
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  color: #868e96;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+
+.transaction-type-toggle button.active {
+  background: #ffffff;
+  color: #228be6;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+
+/* --- LISTA QUOTE --- */
+.custom-split-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  min-width: 0;
+}
+
+
+.custom-split-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f1f3f5;
+  min-width: 0;
+}
+
+
+.custom-split-row:last-child {
+  border-bottom: none;
+}
+
+
+.custom-split-row__name {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #495057;
+  min-width: 0;
+}
+
+
+/* il campo importo a destra deve restare stabile e non rompere la riga */
+.custom-split-amount-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 110px;
+  flex-shrink: 0;
+}
+
+
+.custom-split-input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.5rem;
+  padding-right: 1.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  text-align: right;
+  font: inherit;
+  font-size: 0.95rem;
+  color: #212529;
+  background-color: #ffffff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+
+.custom-split-input:focus {
+  outline: none;
+  border-color: #339af0;
+  box-shadow: 0 0 0 3px rgba(51, 154, 240, 0.15);
+}
+
+
+.custom-split-input:disabled {
+  background-color: #f8f9fa;
+  color: #868e96;
+  cursor: not-allowed;
+}
+
+
+.currency-symbol {
+  position: absolute;
+  right: 0.6rem;
+  color: #adb5bd;
+  pointer-events: none;
+  font: inherit;
+}
+
+
+.custom-split-total {
+  text-align: right;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+
+.custom-split-total--success { color: #2b8a3e; }
+.custom-split-total--error { color: #e03131; }
