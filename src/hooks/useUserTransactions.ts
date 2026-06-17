@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getTransactionsForUser } from '../services/transactionsService'
-import type { Transaction } from '../types'
+import type { Transaction } from '../types/types'
 
 type UseUserTransactionsResult = {
   transactions: Transaction[]

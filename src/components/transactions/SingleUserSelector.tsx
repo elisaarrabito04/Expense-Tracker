@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import type { AppUser } from '../../types/types'
 import { searchUsers } from '../../services/usersService'
 import { useClickOutside } from '../../hooks/useClickOutside'
@@ -34,7 +34,8 @@ export default function SingleUserSelector({
   const [hasSearched, setHasSearched] = useState(false)
 
   // --- STATO RETE ---
-  const isOffline = useNetworkStatus()
+  const isOnline = useNetworkStatus()
+  const isOffline = !isOnline
 
   const containerRef = useRef<HTMLDivElement | null>(null)
   useClickOutside(containerRef, () => setIsDropdownOpen(false), isDropdownOpen)

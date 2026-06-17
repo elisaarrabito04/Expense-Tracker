@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logout, updateUserProfile } from '../services/authService'
 import { useAuth } from '../context/AuthContext'
@@ -29,7 +29,8 @@ export default function Profile() {
   const [isUpdating, setIsUpdating] = useState(false)
 
   // STATO DI RETE
-  const isOffline = useNetworkStatus()
+  const isOnline = useNetworkStatus()
+  const isOffline = !isOnline
 
   // Mappiamo l'array knownParticipants in un dizionario per accesso O(1)
   // esattamente come facevamo prima

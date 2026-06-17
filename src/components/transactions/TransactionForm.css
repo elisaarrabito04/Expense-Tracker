@@ -219,7 +219,7 @@
   max-width: 100%;
   min-width: 0;
   padding: 0.5rem;
-  padding-right: 1.5rem;
+  padding-right: 2.2rem;
   border: 1px solid #ced4da;
   border-radius: 8px;
   text-align: right;
@@ -230,6 +230,19 @@
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+/* Nascondiamo le freccette native del campo number per evitare che occupino spazio e causino sovrapposizioni */
+.form-group input[type="number"]::-webkit-outer-spin-button,
+.form-group input[type="number"]::-webkit-inner-spin-button,
+.custom-split-input::-webkit-outer-spin-button,
+.custom-split-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.form-group input[type="number"],
+.custom-split-input {
+  -moz-appearance: textfield; /* Per Firefox */
+}
 
 .custom-split-input:focus {
   outline: none;

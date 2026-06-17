@@ -3,14 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTransactions } from '../context/TransactionsContext'
 import {
-  getAvailableTags,
   getAvailableMonths,
   getPersonalExpenseAnalysisSummary,
   getPersonalSpendingByTag,
   getYearlySpendingTrend,
   formatCurrency
 } from '../utils/transactions'
-import type { Tag, Transaction, ExpenseTransaction } from '../types/types'
+import type { ExpenseTransaction } from '../types/types'
 import './Analytics.css'
 import FallbackState from '../components/FallbackState'
 

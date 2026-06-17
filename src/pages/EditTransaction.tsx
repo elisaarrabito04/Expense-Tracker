@@ -109,6 +109,7 @@ export default function EditTransaction() {
           if (tx.tagId) {
              // Cerchiamo nella cache, altrimenti su DB
              const t = knownTags.find(kt => kt.id === tx!.tagId) || await getTagById(tx.tagId)
+             if (t) setInitialTag(t)
           }
         } else if (tx.type === 'settlement') {
           // Nel rimborso, estraiamo l'ID dell'ALTRA persona e ne recuperiamo il profilo

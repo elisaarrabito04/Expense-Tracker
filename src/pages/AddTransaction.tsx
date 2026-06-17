@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-import type { TransactionType, Tag, AppUser, Transaction } from '../types/types'
+import type { TransactionType, AppUser } from '../types/types'
 import {useTransactions} from '../context/TransactionsContext'
 import { getAvailableTags, getAvailableUsersIds } from '../utils/transactions'
 import TransactionTypeSwitcher from '../components/transactions/TransactionTypeSwitcher'

@@ -1,4 +1,3 @@
-import React from 'react'
 import './FallbackState.css'
 import loadingIcon from '../assets/loading.svg'
 import errorIcon from '../assets/error.svg'

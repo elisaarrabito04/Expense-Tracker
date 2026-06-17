@@ -1,10 +1,10 @@
-import { Link } from 'react-router-dom';
 import BellIcon from '../../assets/bell.svg?react';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import './TopBar.css';
 
 export default function TopBar() {
-  const isOffline = useNetworkStatus()
+  const isOnline = useNetworkStatus()
+  const isOffline = !isOnline
 
   return (
     <header className="top-bar">

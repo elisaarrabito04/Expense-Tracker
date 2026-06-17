@@ -30,7 +30,8 @@ export default function TagSelector({
   const [isCreating, setIsCreating] = useState(false)
 
   // --- STATO RETE ---
-  const isOffline = useNetworkStatus()
+  const isOnline = useNetworkStatus()
+  const isOffline = !isOnline
 
   // Ref per chiudere il dropdown locale quando si clicca fuori
   const containerRef = useRef<HTMLDivElement | null>(null)

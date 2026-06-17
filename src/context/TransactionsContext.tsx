@@ -1,11 +1,10 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { subscribeToTransactionsForUser } from '../services/transactionsService';
 import { getAllInvolvedTagIds, getAllInvolvedUserIds } from '../utils/transactions';
 import { getTagsByIds } from '../services/tagsService';
 import { getUsersByIds } from '../services/usersService';
 import type { Transaction, Tag, AppUser } from '../types/types';
-import { transactionsMock } from '../data/mockData';
 
 
 // 1. Definiamo la "forma" dei dati che il nostro Context fornirà.
@@ -69,10 +68,12 @@ export function TransactionProvider({ children }: { children: React.ReactNode })
                     setIsLoading(false);
                 }
             },
+            /*
             (err) => {
                 setError("Errore Firestore");
                 setIsLoading(false);
             }
+            */
         );
 
 

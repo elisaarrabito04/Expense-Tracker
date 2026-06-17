@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react'
 
 export function useNetworkStatus() {
-    const [isOffline, setIsOffline] = useState(!navigator.onLine)
-    
-    useEffect(() => {
-        const handleOnline = () => setIsOffline(false)
-        const handleOffline = () => setIsOffline(true)
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
 
-        window.addEventListener('online', handleOnline)
-        window.addEventListener('offline', handleOffline)
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
 
-        return () => {
-            window.removeEventListener('online', handleOnline)
-            window.removeEventListener('offline', handleOffline)
-        }
-    }, [])
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
 
-  return isOffline
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  return isOnline
 }
