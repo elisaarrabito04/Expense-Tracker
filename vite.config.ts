@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import svgr from 'vite-plugin-svgr'
+import svgr from 'vite-plugin-svgr' // per la librerai di Analytics ???
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
@@ -15,7 +15,7 @@ export default defineConfig({
         name: 'SAW Expense Tracker',
         short_name: 'Expenses',
         description: 'Traccia e condividi le spese con i tuoi amici',
-        theme_color: '#0F766E', // Il verde della tua UI
+        theme_color: '#191096', // Il verde della tua UI
         background_color: '#ffffff',
         display: 'standalone',
         icons: [
