@@ -24,16 +24,15 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     return () => unsubscribe()
   }, [currentUser])
 
-  // Filtriamo l'array a monte: l'intero context esporrà SOLO le notifiche non lette.
-  const unreadNotifications = notifications.filter(n => !n.read)
-  const unreadCount = unreadNotifications.length
+  // L'array 'notifications' contiene già solo le notifiche non lette grazie alla query Firestore
+  const unreadCount = notifications.length
 
   const markAsRead = async (id: string) => {
     if (currentUser) await markNotificationAsRead(currentUser.id, id)
   }
 
   return (
-    <NotificationsContext.Provider value={{ notifications: unreadNotifications, unreadCount, markAsRead }}>
+    <NotificationsContext.Provider value={{ notifications, unreadCount, markAsRead }}>
       {children}
     </NotificationsContext.Provider>
   )

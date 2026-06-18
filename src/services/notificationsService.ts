@@ -1,4 +1,4 @@
-import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc } from 'firebase/firestore'
+import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, where } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import type { AppNotification } from '../types/types'
 
@@ -9,6 +9,7 @@ export function subscribeToUserNotifications(
 ) {
   const q = query(
     collection(db, 'users', userId, 'notifications'),
+    where('read', '==', false),
     orderBy('createdAt', 'desc'),
     limit(30)
   )

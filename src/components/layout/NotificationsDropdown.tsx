@@ -1,5 +1,4 @@
 import { useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useNotifications } from '../../context/NotificationsContext'
 import { useTransactions } from '../../context/TransactionsContext'
 import { useClickOutside } from '../../hooks/useClickOutside'
@@ -14,7 +13,6 @@ type Props = {
 export default function NotificationsDropdown({ isOpen, onClose }: Props) {
   const { notifications, markAsRead } = useNotifications()
   const { userTransactions, knownParticipants } = useTransactions()
-  const navigate = useNavigate()
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Chiude il dropdown cliccando fuori
@@ -22,17 +20,12 @@ export default function NotificationsDropdown({ isOpen, onClose }: Props) {
 
   if (!isOpen) return null
 
-  const handleNotificationClick = (notif: AppNotification) => {
+  const handleMarkAsRead = (notif: AppNotification) => {
     if (!notif.read) {
       // Rimuoviamo l'await! Altrimenti offline la navigazione si bloccherebbe
       // finché la promessa di Firestore non viene risolta dal server in background.
       markAsRead(notif.id).catch(err => console.error("Errore notifica letta in background", err))
     }
-    // Se la transazione è stata eliminata o l'utente rimosso, non può esserci navigazione
-    if (notif.type !== 'deleted' && notif.type !== 'removed') {
-      navigate('/')
-    }
-    onClose()
   }
 
   const getNotificationMessage = (notif: AppNotification) => {
@@ -71,12 +64,21 @@ export default function NotificationsDropdown({ isOpen, onClose }: Props) {
           <div className="notifications-empty">Non hai nuove notifiche.</div>
         ) : (
           notifications.map(notif => (
-            <button key={notif.id} className={`notification-item ${!notif.read ? 'unread' : ''}`} onClick={() => handleNotificationClick(notif)}>
+            <div key={notif.id} className={`notification-item ${!notif.read ? 'unread' : ''}`}>
               <div className="notification-content">
                 <p className="notification-text">{getNotificationMessage(notif)}</p>
               </div>
-              {!notif.read && <div className="unread-dot" />}
-            </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleMarkAsRead(notif)}
+                  title="Segna come letta"
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', color: '#868e96', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
           ))
         )}
       </div>
