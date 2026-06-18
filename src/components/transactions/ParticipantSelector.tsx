@@ -50,11 +50,7 @@ export default function ParticipantSelector({
   const filteredKnown = useMemo(() => {
     const normalized = localQuery.trim().toLowerCase()
     if (!normalized) return allKnown
-    return allKnown.filter(
-      (u) =>
-        u.displayNameLowercase?.includes(normalized) ||
-        u.displayName.toLowerCase().includes(normalized)
-    )
+    return allKnown.filter((u) => u.displayName.toLowerCase().includes(normalized))
   }, [allKnown, localQuery])
 
   // 3) Ricerca Globale PWA (Bottom Sheet)

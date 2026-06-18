@@ -2,6 +2,8 @@ import { useState } from 'react'
 import type { AppUser, Transaction, Tag } from '../../types/types'
 import { getUserById,formatCurrency, formatDate } from '../../utils/transactions'
 import './TransactionCard.css'
+import PencilIcon from '../../assets/pencil.svg?react'
+import TrashIcon from '../../assets/trash.svg?react'
 
 type TransactionCardProps = {
   tx: Transaction
@@ -156,16 +158,20 @@ export default function TransactionCard({
                 type="button"
                 className="transaction-card__icon-button"
                 onClick={() => onEdit?.(tx.id)}
+                title="Modifica"
+                aria-label="Modifica"
               >
-                Modifica
+                <PencilIcon style={{ width: '16px', height: '16px' }} />
               </button>
 
               <button
                 type="button"
                 className="transaction-card__icon-button transaction-card__icon-button--danger"
                 onClick={() => onDelete?.(tx.id)}
+                title="Elimina"
+                aria-label="Elimina"
               >
-                Elimina
+                <TrashIcon style={{ width: '16px', height: '16px' }} />
               </button>
             </div>
           )}
@@ -269,16 +275,20 @@ export default function TransactionCard({
               type="button"
               className="transaction-card__icon-button"
               onClick={() => onEdit?.(tx.id)}
+              title="Modifica"
+              aria-label="Modifica"
             >
-              Modifica
+              <PencilIcon style={{ width: '16px', height: '16px' }} />
             </button>
 
             <button
               type="button"
               className="transaction-card__icon-button transaction-card__icon-button--danger"
               onClick={() => onDelete?.(tx.id)}
+              title="Elimina"
+              aria-label="Elimina"
             >
-              Elimina
+              <TrashIcon style={{ width: '16px', height: '16px' }} />
             </button>
           </div>
         )}

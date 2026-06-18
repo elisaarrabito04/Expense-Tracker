@@ -50,7 +50,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: snapshot.id,
               displayName: data.displayName,
               email: data.email,
-              displayNameLowercase: data.displayNameLowercase,
               nickname: data.nickname,
               createdAt: data.createdAt,
             })

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-import type { TransactionType, AppUser } from '../types/types'
+import type { TransactionType, AppUser, ExpenseTransaction } from '../types/types'
 import {useTransactions} from '../context/TransactionsContext'
 import { getAvailableTags, getAvailableUsersIds } from '../utils/transactions'
 import TransactionTypeSwitcher from '../components/transactions/TransactionTypeSwitcher'
@@ -22,6 +22,7 @@ export default function AddTransaction() {
     otherUserId?: string
     amount?: number
     direction?: 'i_paid' | 'they_paid'
+    template?: ExpenseTransaction
   } | null
 
   // 1. Stato per il tipo di transazione: lo impostiamo subito su "settlement" se arriviamo dal Profilo
@@ -82,6 +83,7 @@ export default function AddTransaction() {
           knownParticipants={activeKnownParticipants} 
           userTransactions={userTransactions}
           onSuccess={handleSuccess}
+          templateTransaction={prefillState?.template}
           onCancel={() => navigate(-1)}
         />
       ) : (

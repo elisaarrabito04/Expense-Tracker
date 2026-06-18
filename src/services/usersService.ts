@@ -51,7 +51,6 @@ function toAppUser(id: string, data: DocumentData): AppUser {
     id,
     displayName: data.displayName,
     email: data.email,
-    displayNameLowercase: data.displayNameLowercase,
     nickname: data.nickname,
     createdAt: data.createdAt,
   }
@@ -115,7 +114,6 @@ export async function createOrUpdateAppUser(params: {
     const updates = {
       displayName: normalizedDisplayName,
       email: normalizedEmail,
-      displayNameLowercase: normalizedDisplayName.toLowerCase(),
     }
     if (nickname) {
       Object.assign(updates, { nickname: nickname.trim().toLowerCase() })
@@ -131,7 +129,6 @@ export async function createOrUpdateAppUser(params: {
   const payload = {
     displayName: normalizedDisplayName,
     email: normalizedEmail,
-    displayNameLowercase: normalizedDisplayName.toLowerCase(),
     nickname: nickname ? nickname.trim().toLowerCase() : undefined,
     createdAt: new Date().toISOString(),
   }

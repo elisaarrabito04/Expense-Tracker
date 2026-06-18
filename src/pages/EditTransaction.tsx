@@ -134,7 +134,8 @@ export default function EditTransaction() {
   // --- LISTENER ELIMINAZIONI CONCORRENTI ---
   // Questo effetto si accorge in tempo reale se un altro utente elimina la transazione dal DB.
   useEffect(() => {
-    if (!id) return
+    // Se stiamo modificando un template, non avviamo il listener sulla collezione globale!
+    if (!id || navState?.initialTransaction?.status === 'template') return
 
     const unsubscribe = subscribeToTransactionDeletion(id, () => {
       // Se la transazione scompare da Firestore mentre siamo qui, avvisiamo e cacciamo l'utente
@@ -143,7 +144,7 @@ export default function EditTransaction() {
     })
 
     return () => unsubscribe()
-  }, [id, navigate])
+  }, [id, navigate, navState?.initialTransaction?.status])
 
   // Gestione centralizzata degli stati di fallback (non autenticato, caricamento, errore)
   if (!currentUser) return <FallbackState type="unauthorized" />

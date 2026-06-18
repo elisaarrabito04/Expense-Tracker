@@ -56,11 +56,7 @@ export default function SingleUserSelector({
     const normalized = localQuery.trim().toLowerCase()
     if (!normalized) return baseList
     
-    return baseList.filter(
-      (u) =>
-        u.displayNameLowercase?.includes(normalized) ||
-        u.displayName.toLowerCase().includes(normalized)
-    )
+    return baseList.filter((u) => u.displayName.toLowerCase().includes(normalized))
   }, [knownUsers, currentAppUser, localQuery, excludeCurrentUser])
 
   // 2) Ricerca Globale (Bottom Sheet)

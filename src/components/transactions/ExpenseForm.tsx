@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import type { AppUser, Tag, Transaction, ExpenseTransaction } from '../../types/types'
 import TagSelector from './TagSelector'
 import ParticipantSelector from './ParticipantSelector'
@@ -8,7 +8,9 @@ import './TransactionForm.css'
 import SplitManager from './SplitManager'
 import { createExpense, updateExpense } from '../../services/transactionsService'
 import { buildNewExpense } from '../../utils/transactionFactories'
+import { createTemplate, updateTemplate, checkTemplateExists } from '../../services/templatesService'
 import { getSuggestedClusters, getAvailableUsersIds } from '../../utils/transactions'
+import { useNetworkStatus } from '../../hooks/useNetworkStatus' // per non poter creare un template offline (dato che serve sapere se il nome esiste già)
 
 // Helper per gestire in modo pulito il salvataggio ottimistico
 // senza dover ripetere la logica if/else in ogni punto di salvataggio.
@@ -27,6 +29,7 @@ type ExpenseFormProps = {
   knownParticipants: AppUser[] // per poter già mostrare i nomi
   onSuccess: () => void
   initialTransaction?: ExpenseTransaction // PER IL CLICK SU MODIFICA (per sapere ID, importi, log e tipo di divisione)
+  templateTransaction?: ExpenseTransaction // PER LA PRECOMPILAZIONE DA UN MODELLO
   initialParticipants?: AppUser[] // per mostrare il nome
   initialTag?: Tag | null // per mostrare il nome
   initialPayer?: AppUser | null // per mostrare il nome
@@ -41,7 +44,8 @@ export default function ExpenseForm({
   knownParticipants,
   onSuccess,
   initialTransaction,
-  initialParticipants,
+  templateTransaction,
+  initialParticipants, // per i nomi dato che initialTransaction non li ha, ma è necessario? (per template non succede)
   initialTag,
   initialPayer,
   isSyncing,
@@ -50,15 +54,20 @@ export default function ExpenseForm({
   // --- INIZIALIZZAZIONE DEGLI STATI ---
   // Utilizziamo un operatore ternario (o il coalescing ??) per riempire i campi con i
   // valori di initialTransaction (se stiamo modificando) oppure con stringhe vuote/default (se stiamo creando).
-  const [amount, setAmount] = useState<string>(initialTransaction ? initialTransaction.amount.toString() : '')
-  const [title, setTitle] = useState<string>(initialTransaction ? initialTransaction.description : '')
+  const [amount, setAmount] = useState<string>(initialTransaction ? initialTransaction.amount.toString() : (templateTransaction ? templateTransaction.amount.toString() : ''))
+  const [title, setTitle] = useState<string>(initialTransaction ? initialTransaction.description : (templateTransaction ? templateTransaction.description : ''))
   const [date, setDate] = useState<string>(initialTransaction ? initialTransaction.date : new Date().toISOString().split('T')[0])
-  const [note, setNote] = useState<string>(initialTransaction?.note || '')
+  const [note, setNote] = useState<string>(initialTransaction?.note || templateTransaction?.note || '')
 
-  const [selectedTag, setSelectedTag] = useState<Tag | null>(initialTag || null)
+  const [selectedTag, setSelectedTag] = useState<Tag | null>(() => {
+    if (initialTag) return initialTag
+    if (templateTransaction?.tagId) return knownTags.find(t => t.id === templateTransaction.tagId) || null
+    return null
+  })
   
   const [selectedPayer, setSelectedPayer] = useState<AppUser | null>(() => {
     if (initialPayer) return initialPayer
+    if (templateTransaction?.payerId) return knownParticipants.find(p => p.id === templateTransaction.payerId) || currentUser
     return currentUser // Default al creatore della spesa
   })
 
@@ -66,9 +75,17 @@ export default function ExpenseForm({
   const [selectedParticipants, setSelectedParticipants] = useState<AppUser[]>(() => {
     // Se riceviamo i partecipanti da EditTransaction, li impostiamo di default
     if (initialParticipants && initialParticipants.length > 0) return initialParticipants
+    // Se abbiamo un template, peschiamo i partecipanti dalla cache locale
+    if (templateTransaction?.participantIds) {
+      const mapped = templateTransaction.participantIds.map(id => id === currentUser.id ? currentUser : knownParticipants.find(p => p.id === id)).filter((p): p is AppUser => p !== undefined)
+      if (mapped.length > 0) return mapped
+    }
     // Altrimenti (nuova spesa) inseriamo di default l'utente corrente
     return currentUser ? [currentUser] : []
   })
+
+  // Ref per tracciare quale bottone è stato premuto ("expense" o "template")
+  const submitAction = useRef<'expense' | 'template'>('expense')
 
   // 1. Estraiamo gli ID dei partecipanti selezionati per passarli all'algoritmo di clustering
   const selectedParticipantIds = useMemo(
@@ -104,7 +121,7 @@ export default function ExpenseForm({
     if (initialParticipants && initialParticipants.length > 0) setSelectedParticipants(initialParticipants)
   }, [initialTag, initialPayer, initialParticipants])
 
-  const [splitType, setSplitType] = useState<'equal' | 'custom'>(initialTransaction && initialTransaction.splitType === 'custom' ? 'custom' : 'equal')
+  const [splitType, setSplitType] = useState<'equal' | 'custom'>(initialTransaction && initialTransaction.splitType === 'custom' ? 'custom' : (templateTransaction && templateTransaction.splitType === 'custom' ? 'custom' : 'equal'))
   const [customShares, setCustomShares] = useState<Record<string, string>>(() => {
     const shares: Record<string, string> = {}
     // Se stiamo modificando una spesa di tipo "custom", ricostruiamo il dizionario 
@@ -113,9 +130,16 @@ export default function ExpenseForm({
       initialTransaction.shares.forEach(s => {
         shares[s.userId] = s.amount.toString()
       })
+    } else if (templateTransaction && templateTransaction.splitType === 'custom') {
+      templateTransaction.shares.forEach(s => {
+        shares[s.userId] = s.amount.toString()
+      })
     }
     return shares
   })
+
+  const isOnline = useNetworkStatus()
+  const isOffline = !isOnline
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -126,6 +150,9 @@ export default function ExpenseForm({
 
   // Somma delle quote custom inserite
   const totalCustomShares = Object.values(customShares).reduce((acc, val) => acc + (parseFloat(val) || 0), 0)
+
+  // Booleano comodo per sapere se stiamo modificando un modello esistente
+  const isEditingTemplate = initialTransaction?.status === 'template'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -182,13 +209,63 @@ export default function ExpenseForm({
     const statusesArray = Object.values(participantStatuses)
     const txStatus = statusesArray.includes('rejected') ? 'revision' : (statusesArray.includes('pending') ? 'pending' : 'active')
 
-    try {
-      // Costruiamo l'array delle quote (shares) per il database
-      const shares = selectedParticipants.map(user => ({
-        userId: user.id,
-        amount: splitType === 'equal' ? equalShare : (parseFloat(customShares[user.id]) || 0)
-      }))
+    // Costruiamo l'array delle quote (shares) in anticipo, 
+    // poiché ci serve sia per il template che per la spesa vera e propria
+    const shares = selectedParticipants.map(user => ({
+      userId: user.id,
+      amount: splitType === 'equal' ? equalShare : (parseFloat(customShares[user.id]) || 0)
+    }))
 
+    // --- RAMO SALVATAGGIO / AGGIORNAMENTO TEMPLATE ---
+    if (submitAction.current === 'template') {
+      // Blocco di sicurezza invalicabile se l'utente riesce in qualche modo a premere il bottone offline
+      if (isOffline) {
+        setError("Sei offline. Non è possibile salvare o modificare i modelli senza connessione per verificare che il nome sia disponibile.")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Se stiamo creando un NUOVO template, o se stiamo modificando il NOME di uno esistente, controlliamo l'unicità
+      if (!isEditingTemplate || initialTransaction!.description !== title.trim()) {
+        const exists = await checkTemplateExists(currentUser.id, title.trim())
+        if (exists) {
+          setError(`Hai già un modello salvato con il nome "${title.trim()}". Cambia il titolo della spesa per salvarne uno nuovo.`)
+          setIsSubmitting(false)
+          return
+        }
+      }
+
+      // Costruiamo i participantIds esattamente come fa il service delle transazioni
+      const participantIds = Array.from(new Set([currentUser.id, selectedPayer.id, ...shares.map(s => s.userId)]))
+
+      const templatePayload: Omit<ExpenseTransaction, 'id' | 'createdAt' | 'updatedAt'> = {
+        type: 'expense',
+        description: title.trim(),
+        amount: numericAmount,
+        date,
+        note,
+        payerId: selectedPayer.id,
+        splitType,
+        shares,
+        tagId: selectedTag ? selectedTag.id : null,
+        createdByUserId: currentUser.id,
+        participantIds,
+        status: 'template',
+        participantStatuses, 
+        templateName: title.trim(), // Usiamo il titolo della spesa come nome del template
+      }
+
+      if (isEditingTemplate && initialTransaction) {
+        await executeOptimisticWrite(updateTemplate(currentUser.id, initialTransaction.id, templatePayload))
+      } else {
+        await executeOptimisticWrite(createTemplate(currentUser.id, templatePayload))
+      }
+      
+      onSuccess()
+      return
+    }
+
+    try {
       if (initialTransaction) {
         // --- RAMO UPDATE ---
         
@@ -371,15 +448,31 @@ export default function ExpenseForm({
 
       {error && <p className="transaction-form__error">{error}</p>}
 
-      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
         {onCancel && (
-          <button type="button" className="submit-btn" onClick={onCancel} disabled={isSubmitting || isSyncing} style={{ flex: 1, backgroundColor: '#f8f9fa', color: '#495057', border: '1px solid #ced4da' }}>
+          <button type="button" className="submit-btn" onClick={onCancel} disabled={isSubmitting || isSyncing} style={{ flex: 1, backgroundColor: '#f8f9fa', color: '#495057', border: '1px solid #ced4da', minWidth: '100px' }}>
             Annulla
           </button>
         )}
-        <button type="submit" className="submit-btn" disabled={isSubmitting || isSyncing} style={{ flex: 1 }}>
-          {isSubmitting ? 'Salvataggio in corso...' : (initialTransaction ? 'Aggiorna Spesa' : 'Salva Spesa')}
-        </button>
+        
+        {isEditingTemplate ? (
+          <button type="submit" className="submit-btn" disabled={isSubmitting || isSyncing || isOffline} onClick={() => submitAction.current = 'template'} style={{ flex: 1, backgroundColor: '#e6fcf5', color: '#099268', border: '1px solid #20c997', minWidth: '140px' }}>
+            {isOffline ? 'Offline' : (isSubmitting ? 'Salvataggio...' : 'Aggiorna Modello')}
+          </button>
+        ) : (
+          <>
+            {/* Mostriamo il bottone "Salva come modello" solo per le spese nuove di zecca */}
+            {!initialTransaction && (
+              <button type="submit" className="submit-btn" disabled={isSubmitting || isSyncing || isOffline} onClick={() => submitAction.current = 'template'} style={{ flex: 1, backgroundColor: '#e6fcf5', color: '#099268', border: '1px solid #20c997', minWidth: '140px', padding: '0 8px' }}>
+                {isOffline ? 'Offline' : (isSubmitting && submitAction.current === 'template' ? 'Salvataggio...' : 'Salva come modello')}
+              </button>
+            )}
+            
+            <button type="submit" className="submit-btn" disabled={isSubmitting || isSyncing} onClick={() => submitAction.current = 'expense'} style={{ flex: 2, minWidth: '140px' }}>
+              {isSubmitting && submitAction.current === 'expense' ? 'Salvataggio...' : (initialTransaction ? 'Aggiorna Spesa' : 'Salva Spesa')}
+            </button>
+          </>
+        )}
       </div>
     </form>
   )

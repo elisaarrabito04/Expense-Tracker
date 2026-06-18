@@ -19,7 +19,6 @@ export type AppUser = {
   id: string
   displayName: string
   email: string
-  displayNameLowercase: string
   nickname?: string; 
   createdAt?: string
   updatedAt?: string
@@ -50,7 +49,7 @@ export type TransactionEditLog = {
 
 export type TransactionType = 'expense' | 'settlement'
 
-export type TransactionStatus = 'active' | 'pending' | 'revision' | 'deleted'
+export type TransactionStatus = 'active' | 'pending' | 'revision' | 'deleted' | 'template'
 export type ParticipantStatus = 'accepted' | 'pending' | 'rejected'
 
 export type BaseTransaction = {
@@ -81,6 +80,9 @@ export type BaseTransaction = {
 
   // Storico delle modifiche apportate
   editLogs?: TransactionEditLog[]
+
+  // Opzionale: Se è un template, gli diamo un nome (es. "Affitto Mensile")
+  templateName?: string
 
   // Timestamp applicativi serializzati.
   // In Firestore possono nascere come Timestamp, ma lato UI ti conviene

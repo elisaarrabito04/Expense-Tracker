@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logout, updateUserProfile } from '../services/authService'
 import { useAuth } from '../context/AuthContext'
@@ -6,11 +6,14 @@ import { useTransactions } from '../context/TransactionsContext'
 import { getUserBalancesByPerson, formatCurrency } from '../utils/transactions'
 import { useNetworkStatus } from '../hooks/useNetworkStatus'
 import { useDialog } from '../context/DialogContext'
-import type { AppUser } from '../types/types'
+import type { AppUser, ExpenseTransaction } from '../types/types'
+import { getTemplatesForUser, deleteTemplate } from '../services/templatesService'
 
 import './Profile.css'
 import FallbackState from '../components/FallbackState'
 import logoutIcon from '../assets/logout.svg'
+import PencilIcon from '../assets/pencil.svg?react'
+import TrashIcon from '../assets/trash.svg?react'
 
 export default function Profile() {
   const navigate = useNavigate()
@@ -21,7 +24,7 @@ export default function Profile() {
     isLoading,
     error
   } = useTransactions()
-  const { showAlert } = useDialog()
+  const { showAlert, showConfirm } = useDialog()
 
   // Stati per la gestione della modifica profilo
   const [isEditing, setIsEditing] = useState(false)
@@ -29,6 +32,20 @@ export default function Profile() {
   const [editNickname, setEditNickname] = useState('')
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
+
+  // Stati per i modelli (template)
+  const [templates, setTemplates] = useState<ExpenseTransaction[]>([])
+  const [loadingTemplates, setLoadingTemplates] = useState(true)
+
+  // Recuperiamo i modelli dell'utente all'avvio. 
+  // Funziona anche Offline grazie alla cache di Firestore!
+  useEffect(() => {
+    if (!currentUser?.id) return
+    getTemplatesForUser(currentUser.id)
+      .then(setTemplates)
+      .catch(err => console.error('Errore durante il recupero dei modelli:', err))
+      .finally(() => setLoadingTemplates(false))
+  }, [currentUser?.id])
 
   // STATO DI RETE
   const isOnline = useNetworkStatus()
@@ -83,6 +100,35 @@ export default function Profile() {
         direction: isDebt ? 'i_paid' : 'they_paid',
       },
     })
+  }
+
+  // Funzione invocata quando si clicca su "Usa" in un modello
+  function handleUseTemplate(template: ExpenseTransaction) {
+    navigate('/add', {
+      state: {
+        template: template // Passiamo l'oggetto intero alla pagina di inserimento!
+      }
+    })
+  }
+
+  // Naviga alla pagina di modifica passando il template
+  function handleEditTemplate(template: ExpenseTransaction) {
+    navigate(`/transactions/${template.id}/edit`, {
+      state: { initialTransaction: template }
+    })
+  }
+
+  // Elimina fisicamente il template
+  async function handleDeleteTemplate(template: ExpenseTransaction) {
+    const confirmed = await showConfirm('Elimina modello', `Sei sicuro di voler eliminare il modello "${template.templateName}"?`)
+    if (!confirmed || !currentUser) return
+
+    try {
+      await deleteTemplate(currentUser.id, template.id)
+      setTemplates(prev => prev.filter(t => t.id !== template.id)) // Aggiorniamo la UI
+    } catch (err) {
+      await showAlert('Errore', 'Impossibile eliminare il modello.')
+    }
   }
 
   function handleEditClick() {
@@ -193,6 +239,40 @@ export default function Profile() {
       </header>
 
       <p className="profile-settled-text">Sei in pari con {peopleSettledUp} {peopleSettledUp === 1 ? 'persona' : 'persone'}.</p>
+
+      {/* SEZIONE MODELLI / TEMPLATE */}
+      <div className="profile-templates" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
+        <h3>I tuoi Modelli</h3>
+        {loadingTemplates ? (
+          <p style={{ color: '#666', fontSize: '0.9rem' }}>Caricamento modelli...</p>
+        ) : templates.length === 0 ? (
+          <p style={{ color: '#666', fontSize: '0.9rem' }}>Non hai ancora salvato alcun modello.</p>
+        ) : (
+          <ul className="pending-balances-list">
+            {templates.map((template) => (
+              <li key={template.id} className="pending-balance-item">
+                <div>
+                  <strong className="pending-balance-name">{template.templateName}</strong>
+                  <span className="pending-balance-amount" style={{ color: '#666', fontSize: '0.85rem', display: 'block', marginTop: '2px' }}>
+                    {formatCurrency(template.amount)}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => handleUseTemplate(template)} className="submit-btn settle-btn" style={{ backgroundColor: '#099268', color: 'white', border: 'none', padding: '6px 12px' }}>
+                    Usa
+                  </button>
+                  <button onClick={() => handleEditTemplate(template)} title="Modifica" aria-label="Modifica" className="submit-btn settle-btn" style={{ backgroundColor: '#f8f9fa', color: '#495057', border: '1px solid #ced4da', padding: '6px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <PencilIcon style={{ width: '16px', height: '16px' }} />
+                  </button>
+                  <button onClick={() => handleDeleteTemplate(template)} title="Elimina" aria-label="Elimina" className="submit-btn settle-btn" style={{ backgroundColor: '#fff0f0', color: '#c92a2a', border: '1px solid #ffc9c9', padding: '6px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <TrashIcon style={{ width: '16px', height: '16px' }} />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <h3>Saldi in sospeso</h3>
       {error && <p className="profile-error">{error}</p>}
