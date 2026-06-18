@@ -204,30 +204,17 @@
 }
 
 
-/* il campo importo a destra deve restare stabile e non rompere la riga */
 .custom-split-amount-wrapper {
-  display: flex;
-  align-items: center;
   position: relative;
   width: 110px;
   flex-shrink: 0;
 }
 
-
 .custom-split-input {
   width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  padding: 0.5rem;
-  padding-right: 2.2rem;
-  border: 1px solid #ced4da;
-  border-radius: 8px;
+  padding: 0.5rem 2rem 0.5rem 0.5rem; /* più spazio a destra */
   text-align: right;
-  font: inherit;
-  font-size: 0.95rem;
-  color: #212529;
-  background-color: #ffffff;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  line-height: 1.2;
 }
 
 /* Nascondiamo le freccette native del campo number per evitare che occupino spazio e causino sovrapposizioni */
@@ -255,15 +242,6 @@
   background-color: #f8f9fa;
   color: #868e96;
   cursor: not-allowed;
-}
-
-
-.currency-symbol {
-  position: absolute;
-  right: 0.6rem;
-  color: #adb5bd;
-  pointer-events: none;
-  font: inherit;
 }
 
 

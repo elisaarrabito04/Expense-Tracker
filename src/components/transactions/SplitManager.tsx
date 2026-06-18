@@ -52,7 +52,7 @@ export default function SplitManager({
                 onChange={(e) => onCustomShareChange(user.id, e.target.value)}
                 disabled={splitType === 'equal'} placeholder="0.00"
               />
-              <span className="currency-symbol">€</span>
+              
             </div>
           </div>
         ))}
