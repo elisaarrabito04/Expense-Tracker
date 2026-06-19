@@ -26,10 +26,9 @@ export default function EditTransaction() {
   // Recuperiamo i dati globali per evitare fetch inutili
   const { userTransactions, knownTags, knownParticipants, isLoading: isContextLoading } = useTransactions()
   
-  const [initialParticipants, setInitialParticipants] = useState<AppUser[]>([])
-  const [initialTag, setInitialTag] = useState<Tag | null>(null)
+  const [fetchedUsers, setFetchedUsers] = useState<AppUser[]>([])
+  const [fetchedTags, setFetchedTags] = useState<Tag[]>([])
   const [initialOtherUser, setInitialOtherUser] = useState<AppUser | null>(null)
-  const [initialPayer, setInitialPayer] = useState<AppUser | null>(null)
   
   // Blocchiamo la UI solo se NON abbiamo la transazione in memoria
   const [isLoading, setIsLoading] = useState(!navState?.initialTransaction)
@@ -92,24 +91,18 @@ export default function EditTransaction() {
           // Controlliamo se ci manca qualche utente dalla nostra cache knownParticipants
           const missingIds = uniqueIds.filter(uid => uid !== currentUser!.id && !knownParticipants.some(kp => kp.id === uid))
           
-          let fetchedMissingUsers: AppUser[] = []
           if (missingIds.length > 0) {
-             fetchedMissingUsers = await getUsersByIds(missingIds)
+             const downloadedUsers = await getUsersByIds(missingIds)
+             setFetchedUsers(downloadedUsers)
           }
-          
-          // Uniamo la cache locale con gli eventuali utenti mancanti appena scaricati
-          const allNeededUsers = [currentUser!, ...knownParticipants, ...fetchedMissingUsers]
-          
-          const participantsInShares = allNeededUsers.filter(u => tx!.shares.some(s => s.userId === u.id))
-          setInitialParticipants(participantsInShares)
-          
-          const payerUser = allNeededUsers.find(u => u.id === tx!.payerId) || null
-          setInitialPayer(payerUser)
 
           if (tx.tagId) {
              // Cerchiamo nella cache, altrimenti su DB
-             const t = knownTags.find(kt => kt.id === tx!.tagId) || await getTagById(tx.tagId)
-             if (t) setInitialTag(t)
+             const t = knownTags.find(kt => kt.id === tx!.tagId) 
+             if (!t) {
+                const downloadedTag = await getTagById(tx.tagId)
+                if (downloadedTag) setFetchedTags([downloadedTag])
+             }
           }
         } else if (tx.type === 'settlement') {
           // Nel rimborso, estraiamo l'ID dell'ALTRA persona e ne recuperiamo il profilo
@@ -172,14 +165,11 @@ export default function EditTransaction() {
       {transaction.type === 'expense' ? (
         <ExpenseForm 
           currentUser={currentUser as AppUser} 
-          knownTags={knownTags} 
-          knownParticipants={knownParticipants} 
+          knownTags={[...knownTags, ...fetchedTags]} 
+          knownParticipants={[...knownParticipants, ...fetchedUsers]} 
           userTransactions={userTransactions}
           onSuccess={() => navigate('/home')}
           initialTransaction={transaction as ExpenseTransaction}
-          initialParticipants={initialParticipants}
-          initialTag={initialTag}
-          initialPayer={initialPayer}
           isSyncing={isSyncing}
           onCancel={() => navigate('/home')}
         />

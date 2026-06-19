@@ -24,15 +24,12 @@ async function executeOptimisticWrite(writePromise: Promise<void>) {
 
 type ExpenseFormProps = {
   currentUser: AppUser
-  userTransactions: Transaction[] // per il calcolo dei cluster
-  knownTags: Tag[]
-  knownParticipants: AppUser[] // per poter già mostrare i nomi
+  userTransactions: Transaction[] // (presi dal genitore nel context) per il calcolo dei cluster
+  knownTags: Tag[] // (presi dal genitore nel context) per mostrare le label
+  knownParticipants: AppUser[] // (presi dal genitore nel context) per poter mostrare i nomi
   onSuccess: () => void
   initialTransaction?: ExpenseTransaction // PER IL CLICK SU MODIFICA (per sapere ID, importi, log e tipo di divisione)
   templateTransaction?: ExpenseTransaction // PER LA PRECOMPILAZIONE DA UN MODELLO
-  initialParticipants?: AppUser[] // per mostrare il nome
-  initialTag?: Tag | null // per mostrare il nome
-  initialPayer?: AppUser | null // per mostrare il nome
   isSyncing?: boolean // se il padre EditTransaction sta aspettando ancora si sincronizzare la cache con firestore (per evitare race condition, salvataggi su dati vecchi ecc)
   onCancel?: () => void
 }
@@ -45,9 +42,6 @@ export default function ExpenseForm({
   onSuccess,
   initialTransaction,
   templateTransaction,
-  initialParticipants, // per i nomi dato che initialTransaction non li ha, ma è necessario? (per template non succede)
-  initialTag,
-  initialPayer,
   isSyncing,
   onCancel,
 }: ExpenseFormProps) {
@@ -60,21 +54,23 @@ export default function ExpenseForm({
   const [note, setNote] = useState<string>(initialTransaction?.note || templateTransaction?.note || '')
 
   const [selectedTag, setSelectedTag] = useState<Tag | null>(() => {
-    if (initialTag) return initialTag
+    if (initialTransaction?.tagId) return knownTags.find(t => t.id === initialTransaction.tagId) || null
     if (templateTransaction?.tagId) return knownTags.find(t => t.id === templateTransaction.tagId) || null
     return null
   })
   
   const [selectedPayer, setSelectedPayer] = useState<AppUser | null>(() => {
-    if (initialPayer) return initialPayer
+    if (initialTransaction?.payerId) return knownParticipants.find(p => p.id === initialTransaction.payerId) || currentUser
     if (templateTransaction?.payerId) return knownParticipants.find(p => p.id === templateTransaction.payerId) || currentUser
     return currentUser // Default al creatore della spesa
   })
 
   // Inizializzazione "lazy" (con callback) per evitare computazioni a ogni render:
   const [selectedParticipants, setSelectedParticipants] = useState<AppUser[]>(() => {
-    // Se riceviamo i partecipanti da EditTransaction, li impostiamo di default
-    if (initialParticipants && initialParticipants.length > 0) return initialParticipants
+    if (initialTransaction?.shares) {
+      const mapped = initialTransaction.shares.map(s => s.userId === currentUser.id ? currentUser : knownParticipants.find(p => p.id === s.userId)).filter((p): p is AppUser => p !== undefined)
+      if (mapped.length > 0) return mapped
+    }
     // Se abbiamo un template, peschiamo i partecipanti dalla cache locale
     if (templateTransaction?.participantIds) {
       const mapped = templateTransaction.participantIds.map(id => id === currentUser.id ? currentUser : knownParticipants.find(p => p.id === id)).filter((p): p is AppUser => p !== undefined)
@@ -114,12 +110,29 @@ export default function ExpenseForm({
   }
 
   // --- SINCRONIZZAZIONE BACKGROUND ---
-  // Ascoltiamo l'arrivo dei dati asincroni scaricati dal componente padre e popoliamo la UI
+  // Ascoltiamo l'arrivo dei dati asincroni (se mancavano e sono stati scaricati in un secondo momento dal genitore)
+  const initializedTxId = useRef<string | null>(null)
+
   useEffect(() => {
-    if (initialTag) setSelectedTag(initialTag)
-    if (initialPayer) setSelectedPayer(initialPayer)
-    if (initialParticipants && initialParticipants.length > 0) setSelectedParticipants(initialParticipants)
-  }, [initialTag, initialPayer, initialParticipants])
+    if (initialTransaction && initializedTxId.current !== initialTransaction.id) {
+       const neededUserIds = [...initialTransaction.shares.map(s => s.userId), initialTransaction.payerId]
+       const availableUserIds = new Set(knownParticipants.map(p => p.id).concat(currentUser.id))
+       const allUsersAvailable = neededUserIds.every(id => availableUserIds.has(id))
+
+       const neededTagId = initialTransaction.tagId
+       const allTagsAvailable = !neededTagId || knownTags.some(t => t.id === neededTagId)
+
+       if (allUsersAvailable && allTagsAvailable) {
+          if (neededTagId) setSelectedTag(knownTags.find(t => t.id === neededTagId) || null)
+          setSelectedPayer(knownParticipants.find(p => p.id === initialTransaction.payerId) || currentUser)
+          
+          const mappedParticipants = initialTransaction.shares.map(s => s.userId === currentUser.id ? currentUser : knownParticipants.find(p => p.id === s.userId)).filter((p): p is AppUser => p !== undefined)
+          if (mappedParticipants.length > 0) setSelectedParticipants(mappedParticipants)
+
+          initializedTxId.current = initialTransaction.id
+       }
+    }
+  }, [initialTransaction, knownParticipants, knownTags, currentUser])
 
   const [splitType, setSplitType] = useState<'equal' | 'custom'>(initialTransaction && initialTransaction.splitType === 'custom' ? 'custom' : (templateTransaction && templateTransaction.splitType === 'custom' ? 'custom' : 'equal'))
   const [customShares, setCustomShares] = useState<Record<string, string>>(() => {
