@@ -50,7 +50,6 @@ function toAppUser(id: string, data: DocumentData): AppUser {
   return {
     id,
     displayName: data.displayName,
-    email: data.email,
     nickname: data.nickname,
     createdAt: data.createdAt,
   }
@@ -89,31 +88,25 @@ function uniqueUsers(users: AppUser[]): AppUser[] {
 export async function createOrUpdateAppUser(params: {
   uid: string
   displayName: string
-  email: string
   nickname?: string
 }): Promise<AppUser> {
-  const { uid, displayName, email, nickname } = params
+  const { uid, displayName, nickname } = params
 
   // Normalizza il nome da mostrare nell'app
   const normalizedDisplayName = normalizeDisplayName(displayName)
-  const normalizedEmail = email.trim().toLowerCase()
 
   // Controlliamo se l'utente esiste già
   const existingUser = await getUserById(uid)
 
   if (existingUser) {
     // Se i dati sono identici, evitiamo scritture inutili su Firestore
-    if (
-      existingUser.displayName === normalizedDisplayName &&
-      existingUser.email === normalizedEmail
-    ) {
+    if (existingUser.displayName === normalizedDisplayName) {
       return existingUser
     }
 
     // È un UPDATE: aggiorniamo solo i dati cambiati senza toccare `createdAt`
     const updates = {
       displayName: normalizedDisplayName,
-      email: normalizedEmail,
     }
     if (nickname) {
       Object.assign(updates, { nickname: nickname.trim().toLowerCase() })
@@ -124,11 +117,8 @@ export async function createOrUpdateAppUser(params: {
   }
 
   // È una CREATE
-  // Costruisce l'oggetto utente nel formato previsto dall'app.
-  // Non salviamo `id` nel documento perché l'id vero è già il path users/{uid}.
   const payload = {
     displayName: normalizedDisplayName,
-    email: normalizedEmail,
     nickname: nickname ? nickname.trim().toLowerCase() : undefined,
     createdAt: new Date().toISOString(),
   }
@@ -173,18 +163,15 @@ export async function ensureAppUserFromAuth(
   firebaseUser: FirebaseUser
 ): Promise<AppUser | null> {
   const authDisplayName = firebaseUser.displayName?.trim()
-  const authEmail = firebaseUser.email?.trim().toLowerCase()
 
   // Se manca un nome affidabile, meglio non creare un profilo incompleto.
-  // In questo caso sarà la UI a decidere come gestire l'errore o il completamento profilo.
-  if (!authDisplayName || !authEmail) {
+  if (!authDisplayName) {
     return null
   }
 
   return createOrUpdateAppUser({
     uid: firebaseUser.uid,
     displayName: authDisplayName,
-    email: authEmail,
   })
 }
 

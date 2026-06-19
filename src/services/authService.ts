@@ -59,7 +59,6 @@ export async function registerWithEmail(params: {
   const appUser = await createOrUpdateAppUser({
     uid: firebaseUser.uid,
     displayName: normalizedDisplayName,
-    email: firebaseUser.email ?? normalizedEmail,
     nickname: normalizedNickname,
   })
 
@@ -164,7 +163,6 @@ export async function updateUserProfile(params: {
   return createOrUpdateAppUser({
     uid: user.uid,
     displayName: normalizedDisplayName,
-    email: user.email!, // manteniamo l'email originale
     nickname: normalizedNickname,
   })
 }

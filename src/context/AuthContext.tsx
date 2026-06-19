@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setCurrentUser({
               id: snapshot.id,
               displayName: data.displayName,
-              email: data.email,
+              email: user.email || undefined, // recuperata da Auth
               nickname: data.nickname,
               createdAt: data.createdAt,
             })

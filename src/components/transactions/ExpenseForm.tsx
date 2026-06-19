@@ -46,34 +46,27 @@ export default function ExpenseForm({
   onCancel,
 }: ExpenseFormProps) {
   // --- INIZIALIZZAZIONE DEGLI STATI ---
-  // Utilizziamo un operatore ternario (o il coalescing ??) per riempire i campi con i
-  // valori di initialTransaction (se stiamo modificando) oppure con stringhe vuote/default (se stiamo creando).
-  const [amount, setAmount] = useState<string>(initialTransaction ? initialTransaction.amount.toString() : (templateTransaction ? templateTransaction.amount.toString() : ''))
-  const [title, setTitle] = useState<string>(initialTransaction ? initialTransaction.description : (templateTransaction ? templateTransaction.description : ''))
-  const [date, setDate] = useState<string>(initialTransaction ? initialTransaction.date : new Date().toISOString().split('T')[0])
-  const [note, setNote] = useState<string>(initialTransaction?.note || templateTransaction?.note || '')
+  const source = initialTransaction || templateTransaction
+
+  const [amount, setAmount] = useState<string>(source ? source.amount.toString() : '')
+  const [title, setTitle] = useState<string>(source ? source.description : '')
+  const [date, setDate] = useState<string>(source ? source.date : new Date().toISOString().split('T')[0])
+  const [note, setNote] = useState<string>(source?.note || '')
 
   const [selectedTag, setSelectedTag] = useState<Tag | null>(() => {
-    if (initialTransaction?.tagId) return knownTags.find(t => t.id === initialTransaction.tagId) || null
-    if (templateTransaction?.tagId) return knownTags.find(t => t.id === templateTransaction.tagId) || null
+    if (source?.tagId) return knownTags.find(t => t.id === source.tagId) || null
     return null
   })
   
   const [selectedPayer, setSelectedPayer] = useState<AppUser | null>(() => {
-    if (initialTransaction?.payerId) return knownParticipants.find(p => p.id === initialTransaction.payerId) || currentUser
-    if (templateTransaction?.payerId) return knownParticipants.find(p => p.id === templateTransaction.payerId) || currentUser
+    if (source?.payerId) return knownParticipants.find(p => p.id === source.payerId) || currentUser
     return currentUser // Default al creatore della spesa
   })
 
   // Inizializzazione "lazy" (con callback) per evitare computazioni a ogni render:
   const [selectedParticipants, setSelectedParticipants] = useState<AppUser[]>(() => {
-    if (initialTransaction?.shares) {
-      const mapped = initialTransaction.shares.map(s => s.userId === currentUser.id ? currentUser : knownParticipants.find(p => p.id === s.userId)).filter((p): p is AppUser => p !== undefined)
-      if (mapped.length > 0) return mapped
-    }
-    // Se abbiamo un template, peschiamo i partecipanti dalla cache locale
-    if (templateTransaction?.participantIds) {
-      const mapped = templateTransaction.participantIds.map(id => id === currentUser.id ? currentUser : knownParticipants.find(p => p.id === id)).filter((p): p is AppUser => p !== undefined)
+    if (source?.shares) {
+      const mapped = source.shares.map(s => s.userId === currentUser.id ? currentUser : knownParticipants.find(p => p.id === s.userId)).filter((p): p is AppUser => p !== undefined)
       if (mapped.length > 0) return mapped
     }
     // Altrimenti (nuova spesa) inseriamo di default l'utente corrente
@@ -134,17 +127,13 @@ export default function ExpenseForm({
     }
   }, [initialTransaction, knownParticipants, knownTags, currentUser])
 
-  const [splitType, setSplitType] = useState<'equal' | 'custom'>(initialTransaction && initialTransaction.splitType === 'custom' ? 'custom' : (templateTransaction && templateTransaction.splitType === 'custom' ? 'custom' : 'equal'))
+  const [splitType, setSplitType] = useState<'equal' | 'custom'>(source?.splitType === 'custom' ? 'custom' : 'equal')
   const [customShares, setCustomShares] = useState<Record<string, string>>(() => {
     const shares: Record<string, string> = {}
-    // Se stiamo modificando una spesa di tipo "custom", ricostruiamo il dizionario 
+    // Se stiamo modificando una spesa di tipo "custom" o un template, ricostruiamo il dizionario 
     // delle quote personalizzate estrapolando i valori dall'array `shares` del db
-    if (initialTransaction && initialTransaction.splitType === 'custom') {
-      initialTransaction.shares.forEach(s => {
-        shares[s.userId] = s.amount.toString()
-      })
-    } else if (templateTransaction && templateTransaction.splitType === 'custom') {
-      templateTransaction.shares.forEach(s => {
+    if (source?.splitType === 'custom') {
+      source.shares.forEach(s => {
         shares[s.userId] = s.amount.toString()
       })
     }
@@ -325,8 +314,8 @@ export default function ExpenseForm({
           participantStatuses,
           editLogs: updatedLogs,
         }
-        // Eseguiamo il salvataggio sfruttando l'helper
-        await executeOptimisticWrite(updateExpense(updatedPayload, currentUser.id))
+        // Eseguiamo il salvataggio sfruttando l'helper e passando initialTransaction come oldTx
+        await executeOptimisticWrite(updateExpense(updatedPayload, initialTransaction, currentUser.id))
       } else {
         // --- RAMO CREATE ---
         const payload = buildNewExpense({
@@ -462,6 +451,11 @@ export default function ExpenseForm({
       {error && <p className="transaction-form__error">{error}</p>}
 
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+        {isOffline && (
+          <div style={{ width: '100%', textAlign: 'center', marginBottom: '8px', color: '#e67700', fontSize: '0.9rem', fontWeight: 'bold' }}>
+            ☁️ Sei offline. Il salvataggio avverrà in locale e verrà sincronizzato appena tornerà la connessione.
+          </div>
+        )}
         {onCancel && (
           <button type="button" className="submit-btn" onClick={onCancel} disabled={isSubmitting || isSyncing} style={{ flex: 1, backgroundColor: '#f8f9fa', color: '#495057', border: '1px solid #ced4da', minWidth: '100px' }}>
             Annulla

@@ -1,17 +1,10 @@
-import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTransactions } from '../context/TransactionsContext'
-import {
-  getAvailableMonths,
-  getPersonalExpenseAnalysisSummary,
-  getPersonalSpendingByTag,
-  getYearlySpendingTrend,
-  formatCurrency
-} from '../utils/transactions'
-import type { ExpenseTransaction } from '../types/types'
+import { formatCurrency } from '../utils/transactions'
 import './Analytics.css'
 import FallbackState from '../components/FallbackState'
+import { useAnalyticsData, PIE_COLORS } from '../hooks/useAnalyticsData'
 
 import {
   ResponsiveContainer,
@@ -24,24 +17,6 @@ import {
   YAxis,
   CartesianGrid
 } from 'recharts'
-
-// Array di colori esadecimali per le fette del grafico a torta.
-// Recharts li assegnerà in ordine iterando su questo array.
-const PIE_COLORS = [
-  '#0F766E', // Teal scuro
-  '#14B8A6', // Teal
-  '#06B6D4', // Cyan
-  '#8B5CF6', // Viola
-  '#F59E0B', // Ambra
-  '#F97316', // Arancione
-]
-
-// Utility locale per trasformare "senza_tag" o tagId in una label più leggibile
-function getReadableTagLabel(tagId: string, tagsMap: Map<string, string>) {
-  if (tagId === 'senza_tag') return 'Senza tag'
-  if (tagId === 'altro') return 'Altro'
-  return tagsMap.get(tagId) || tagId
-}
 
 export default function Analytics() {
   const navigate = useNavigate()
@@ -56,92 +31,19 @@ export default function Analytics() {
     error
   } = useTransactions()
 
-  // Filtri stato locale
-  const [selectedMonth, setSelectedMonth] = useState('') // YYYY-MM
-  const [selectedYear, setSelectedYear] = useState('') // YYYY
-
-  // 1. Isolo SUBITO solo le spese ATTIVE.
-  // Le analisi statistiche devono basarsi solo su transazioni confermate,
-  // quindi filtriamo a monte per status === 'active' per pulire i dati una sola volta.
-  const activeExpenses = useMemo(() => {
-    return transactions.filter((tx): tx is ExpenseTransaction => tx.type === 'expense' && tx.status === 'active')
-  }, [transactions])
-
-  // per le opzioni dei filtri
-  const availableMonths = useMemo(() => {
-    if (!currentUserId) return []
-    return getAvailableMonths(activeExpenses)
-  }, [activeExpenses, currentUserId])
-
-  // Estraiamo gli anni disponibili partendo dai mesi (es. da "2024-05" a "2024")
-  const availableYears = useMemo(() => {
-    const years = availableMonths.map((m) => m.slice(0, 4))
-    return Array.from(new Set(years)) // Rimuove i duplicati
-  }, [availableMonths])
-
-  // Mesi disponibili per l'anno attualmente selezionato
-  const availableMonthsInSelectedYear = useMemo(() => {
-    return availableMonths.filter((m) => m.startsWith(selectedYear))
-  }, [availableMonths, selectedYear])
-
-  // Sincronizziamo l'anno selezionato: se quello attuale non c'è, prendiamo il più recente
-  useEffect(() => {
-    if (availableYears.length > 0 && !availableYears.includes(selectedYear)) {
-      setSelectedYear(availableYears[0])
-    }
-  }, [availableYears, selectedYear])
-
-  // Sincronizziamo il mese selezionato in base all'anno
-  useEffect(() => {
-    if (availableMonthsInSelectedYear.length > 0 && !availableMonthsInSelectedYear.includes(selectedMonth)) {
-      // Se cambiamo anno e il mese attuale non c'è, andiamo sul mese più recente di quell'anno
-      setSelectedMonth(availableMonthsInSelectedYear[0])
-    }
-  }, [availableMonthsInSelectedYear, selectedMonth])
-
-  // 2. Filtro per il mese selezionato per il Pie Chart e il Recap iniziale
-  const monthExpenses = useMemo(() => {
-    return activeExpenses.filter((tx) => tx.date.startsWith(selectedMonth))
-  }, [activeExpenses, selectedMonth])
-
-  // 3. Calcolo Recap (Totale, Media, Numero transazioni) delle spese filtrate per mese
-  const monthSummary = useMemo(() => {
-    return getPersonalExpenseAnalysisSummary(monthExpenses, currentUserId!)
-  }, [monthExpenses, currentUserId])
-
-  // 4. Calcolo per Pie Chart (con raggruppamento automatico 'altro' nella funzione stessa, oltre il limite)
-  const pieChartData = useMemo(() => {
-    if (!currentUserId) return []
-    return getPersonalSpendingByTag(monthExpenses, currentUserId, 6) // limite numero tag visualizzabili (escluso i "senza tag")
-  }, [monthExpenses, currentUserId])
-
-  // 5. Arricchiamo i dati del Pie Chart con le label dei tag
-  const pieChartDataWithLabels = useMemo(() => {
-    const tagsMap = new Map(availableTags.map((tag) => [tag.id, tag.label])) // ricavo le coppie (tagId, label)
-
-    return pieChartData.map((dataPoint, index) => ({
-      ...dataPoint,
-      // sovrascrivo cercando la label corrispondente nella mappa:
-      // se c'è allora la sostituisco
-      // se non c'è vorrà dire che è "senzaTag" o "altro" e va bene così
-      label: getReadableTagLabel(dataPoint.tagId, tagsMap),
-      fill: PIE_COLORS[index % PIE_COLORS.length] // Assegniamo il colore direttamente al dato
-    }))
-  }, [pieChartData, availableTags])
-
-  // 6. Calcolo per Bar Chart (Andamento anno)
-  const barChartData = useMemo(() => {
-    if (!currentUserId) return []
-    return getYearlySpendingTrend(activeExpenses, currentUserId, selectedYear)
-  }, [activeExpenses, currentUserId, selectedYear])
-
-  // Utility per formattare il nome del mese selezionato (es. da "2024-05" a "Maggio 2024")
-  const formattedMonthName = useMemo(() => {
-    if (!selectedMonth) return ''
-    const date = new Date(`${selectedMonth}-01`)
-    const monthStr = date.toLocaleDateString('it-IT', { month: 'long' })
-    return monthStr.charAt(0).toUpperCase() + monthStr.slice(1) + ' ' + selectedYear
-  }, [selectedMonth, selectedYear])
+  const {
+    selectedMonth,
+    setSelectedMonth,
+    selectedYear,
+    setSelectedYear,
+    activeExpenses,
+    availableYears,
+    availableMonthsInSelectedYear,
+    monthSummary,
+    pieChartDataWithLabels,
+    barChartData,
+    formattedMonthName
+  } = useAnalyticsData(transactions, availableTags, currentUserId)
 
   // Gestione degli stati di base della pagina usando FallbackState per uniformità visiva
   if (authLoading || isLoading) {

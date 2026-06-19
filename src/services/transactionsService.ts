@@ -199,18 +199,6 @@ function mapDataToTransaction(id: string, data: DocumentData): Transaction {
 // LETTURA
 // -----------------------------------------------------------------------------
 
-// Utile soprattutto per debug, admin o test manuali.
-// Nella UI normale non dovrebbe essere la API principale.
-export async function getAllTransactions(): Promise<Transaction[]> {
-  const q = query(
-    collection(db, TRANSACTIONS_COLLECTION),
-    orderBy('date', 'desc')
-  )
-
-  const snapshot = await getDocs(q)
-  return snapshot.docs.map(mapDocToTransaction)
-}
-
 // USATA PER LA SOTTOSCRIZIONE AL LISTENER
 // Recupera tutte le transazioni in cui l'utente compare tra i participantIds.
 export async function getTransactionsForUser(userId: string): Promise<Transaction[]> {
@@ -227,7 +215,7 @@ export async function getTransactionsForUser(userId: string): Promise<Transactio
   // converto ogni documento nel tipo transaction che mi aspetto
   // cioè aggiungendo il campo id creato da firestore inserendolo come campo id della transazione per poterlo usare
   // (per esempio serve per la list per avere un campo univoco per renderizzare, oppure per la URL per una modifica, anche se non per forza..)
-  return snapshot.docs.map(mapDocToTransaction) 
+  return snapshot.docs.map(mapDocToTransaction)
 }
 
 // API per ascoltare le transazioni in tempo reale.
@@ -354,7 +342,7 @@ export async function createExpense(
   // 4. Batch Write: Transazione + Notifiche
   const batch = writeBatch(db)
   const txRef = doc(collection(db, TRANSACTIONS_COLLECTION))
-  
+
   batch.set(txRef, payload)
 
   // Invio notifica 'added' a tutti tranne al creatore
@@ -392,7 +380,7 @@ export async function createSettlement(
 
   const batch = writeBatch(db)
   const txRef = doc(collection(db, TRANSACTIONS_COLLECTION))
-  
+
   batch.set(txRef, payload)
 
   // Invio notifica 'added' a tutti tranne al creatore
@@ -413,6 +401,7 @@ export async function createSettlement(
 // Anche qui ricostruisco participantIds per mantenere coerenza nel feed personale.
 export async function updateExpense(
   updatedTransaction: ExpenseTransaction,
+  oldTx: ExpenseTransaction, // <-- OTTIMIZZAZIONE: Passiamo la transazione originale dal frontend per evitare 1 lettura fatturata
   updaterId: string
 ): Promise<void> {
   assertNonEmptyString(updatedTransaction.id, 'id')
@@ -424,8 +413,9 @@ export async function updateExpense(
     updatedTransaction.shares
   )
 
-  // RECUPERO LA VECCHIA TRANSAZIONE PER CALCOLARE I DIFF SUI PARTECIPANTI
-  const oldTx = await getTransactionById(updatedTransaction.id)
+  // RECUPERO LA VECCHIA TRANSAZIONE (OTTIMIZZATO)
+  // Non facciamo più: const oldTx = await getTransactionById(updatedTransaction.id)
+  // perché abbiamo già oldTx passato come parametro dal frontend! Risparmiamo costi di lettura Firestore.
   if (!oldTx) throw new Error("Transazione non trovata")
 
   const oldParticipantIds = new Set(oldTx.participantIds)
@@ -444,7 +434,7 @@ export async function updateExpense(
   })
 
   // CALCOLO NOTIFICHE
-  const isStatusChangeOnly = updaterId !== updatedTransaction.createdByUserId && 
+  const isStatusChangeOnly = updaterId !== updatedTransaction.createdByUserId &&
     oldTx.participantStatuses[updaterId] !== updatedTransaction.participantStatuses[updaterId];
 
   participantIds.forEach((userId) => {
@@ -458,7 +448,7 @@ export async function updateExpense(
           addNotificationToBatch(batch, userId, newStatus, id, updatedTransaction.description, updaterId)
         }
       }
-      return 
+      return
     }
 
     // Se è una vera modifica ai dati della transazione
@@ -480,6 +470,7 @@ export async function updateExpense(
 // Aggiorna un settlement esistente.
 export async function updateSettlement(
   updatedTransaction: SettlementTransaction,
+  oldTx: SettlementTransaction, // <-- OTTIMIZZAZIONE
   updaterId: string
 ): Promise<void> {
   assertNonEmptyString(updatedTransaction.id, 'id')
@@ -491,9 +482,10 @@ export async function updateSettlement(
     updatedTransaction.toUserId
   )
 
-  const oldTx = await getTransactionById(updatedTransaction.id)
+  // Non facciamo più: const oldTx = await getTransactionById(updatedTransaction.id)
+  // Usiamo oldTx passato come prop per risparmiare query
   if (!oldTx) throw new Error("Transazione non trovata")
-  
+
   const { id, ...rest } = updatedTransaction
 
   const batch = writeBatch(db)
@@ -505,7 +497,7 @@ export async function updateSettlement(
     updatedAt: serverTimestamp(),
   })
 
-  const isStatusChangeOnly = updaterId !== updatedTransaction.createdByUserId && 
+  const isStatusChangeOnly = updaterId !== updatedTransaction.createdByUserId &&
     oldTx.participantStatuses[updaterId] !== updatedTransaction.participantStatuses[updaterId];
 
   participantIds.forEach((userId) => {
@@ -528,13 +520,13 @@ export async function updateSettlement(
 }
 
 // fa dispatch del tipo di update
-export async function updateTransaction(transaction: Transaction, updaterId: string): Promise<void> {
+export async function updateTransaction(transaction: Transaction, oldTx: Transaction, updaterId: string): Promise<void> {
   if (transaction.type === 'expense') {
-    await updateExpense(transaction, updaterId)
+    await updateExpense(transaction, oldTx as ExpenseTransaction, updaterId)
     return
   }
 
-  await updateSettlement(transaction, updaterId)
+  await updateSettlement(transaction, oldTx as SettlementTransaction, updaterId)
 }
 
 // -----------------------------------------------------------------------------

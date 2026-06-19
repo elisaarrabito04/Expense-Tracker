@@ -6,6 +6,7 @@ import { buildNewSettlement } from '../../utils/transactionFactories'
 import { getUserById } from '../../services/usersService'
 import { useTransactions } from '../../context/TransactionsContext'
 import { getAvailableUsersIds } from '../../utils/transactions'
+import { useNetworkStatus } from '../../hooks/useNetworkStatus'
 
 // Helper per gestire in modo pulito il salvataggio ottimistico
 // senza dover ripetere la logica if/else in ogni punto di salvataggio.
@@ -57,7 +58,7 @@ export default function SettlementForm({
   const [note, setNote] = useState<string>(initialTransaction?.note || '')
 
   const [otherUser, setOtherUser] = useState<AppUser | null>(initialOtherUser || null)
-  
+
 
   const [direction, setDirection] = useState<'i_paid' | 'they_paid'>(() => {
     if (initialTransaction) {
@@ -95,6 +96,9 @@ export default function SettlementForm({
     }
   }, [initialOtherUserId, knownParticipants, initialOtherUser, initialTransaction])
 
+  const isOnline = useNetworkStatus()
+  const isOffline = !isOnline
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -114,7 +118,7 @@ export default function SettlementForm({
 
     // --- GESTIONE ACCETTAZIONE PREVENTIVA ---
     const participantStatuses: Record<string, 'accepted' | 'pending' | 'rejected'> = {}
-    
+
     // L'utente che compila il form accetta sempre
     participantStatuses[currentUser.id] = 'accepted'
 
@@ -175,8 +179,8 @@ export default function SettlementForm({
           editLogs: updatedLogs,
         }
 
-        // Eseguiamo l'aggiornamento sfruttando l'helper
-        await executeOptimisticWrite(updateSettlement(updatedPayload, currentUser.id))
+        // Eseguiamo l'aggiornamento sfruttando l'helper e passando initialTransaction come oldTx
+        await executeOptimisticWrite(updateSettlement(updatedPayload, initialTransaction, currentUser.id))
       } else {
         const payload = buildNewSettlement({
           amount: numericAmount,
@@ -189,7 +193,7 @@ export default function SettlementForm({
           status: txStatus,
           participantStatuses,
         })
-        
+
         // Eseguiamo la creazione sfruttando l'helper
         await executeOptimisticWrite(createSettlement(payload))
       }
@@ -203,8 +207,8 @@ export default function SettlementForm({
   }
 
   return (
-    <form 
-      onSubmit={handleSubmit} 
+    <form
+      onSubmit={handleSubmit}
       className="transaction-form"
       onKeyDown={(e) => {
         // Previene il submit del form se si preme Invio in un qualsiasi campo di testo (es. barra di ricerca del bottom sheet)
@@ -268,7 +272,12 @@ export default function SettlementForm({
 
       {error && <p className="transaction-form__error" style={{ color: '#b42318', fontWeight: 'bold' }}>{error}</p>}
 
-      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+        {isOffline && (
+          <div style={{ width: '100%', textAlign: 'center', marginBottom: '8px', color: '#e67700', fontSize: '0.9rem', fontWeight: 'bold' }}>
+            ☁️ Sei offline. Il salvataggio avverrà in locale e verrà sincronizzato appena tornerà la connessione.
+          </div>
+        )}
         {onCancel && (
           <button type="button" className="submit-btn" onClick={onCancel} disabled={isSubmitting || isSyncing} style={{ flex: 1, backgroundColor: '#f8f9fa', color: '#495057', border: '1px solid #ced4da' }}>
             Annulla

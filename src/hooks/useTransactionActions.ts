@@ -61,7 +61,7 @@ export function useTransactionActions(
         ...tx,
         participantStatuses: newStatuses,
         status: newStatus,
-      }, currentUserId)
+      }, tx, currentUserId)
     } catch (err) {
       await showAlert('Errore', "Errore durante l'accettazione della transazione.")
     }
@@ -76,12 +76,12 @@ export function useTransactionActions(
       if (!confirmReject) return
 
       const newStatuses = { ...tx.participantStatuses, [currentUserId]: 'rejected' as ParticipantStatus }
-      
+
       await updateTransaction({
         ...tx,
         participantStatuses: newStatuses,
         status: 'revision',
-      }, currentUserId)
+      }, tx, currentUserId)
     } catch (err) {
       await showAlert('Errore', 'Errore durante il rifiuto della transazione.')
     }
@@ -103,7 +103,7 @@ export function useTransactionActions(
       await showAlert('Errore', 'Solo il creatore può modificare una transazione in attesa di accettazione.')
       return
     }
-    
+
     if (transactionToEdit.status === 'revision' && transactionToEdit.createdByUserId !== currentUserId) {
       await showAlert('Errore', 'Solo il creatore può modificare una transazione in revisione.')
       return

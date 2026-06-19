@@ -18,7 +18,7 @@ export type AppUser = {
   // Coincide sempre con il uid di Firebase Auth.
   id: string
   displayName: string
-  email: string
+  email?: string
   nickname?: string; 
   createdAt?: string
   updatedAt?: string

@@ -53,6 +53,8 @@
   font-size: 1rem;
   font-weight: 700;
   color: #1f1f1f;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .transaction-card__meta {
