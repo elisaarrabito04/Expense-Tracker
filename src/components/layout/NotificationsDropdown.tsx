@@ -11,7 +11,7 @@ type Props = {
 }
 
 export default function NotificationsDropdown({ isOpen, onClose }: Props) {
-  const { notifications, markAsRead } = useNotifications()
+  const { notifications, markAsRead, markAllAsRead } = useNotifications()
   const { userTransactions, knownParticipants } = useTransactions()
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -56,9 +56,24 @@ export default function NotificationsDropdown({ isOpen, onClose }: Props) {
     }
   }
 
+  const handleMarkAllAsRead = () => {
+    markAllAsRead().catch(err => console.error("Errore markAllAsRead", err))
+  }
+
   return (
     <div className="notifications-dropdown" ref={containerRef}>
-      <div className="notifications-header"><h4>Notifiche</h4></div>
+      <div className="notifications-header">
+        <h4>Notifiche</h4>
+        {notifications.length > 0 && notifications.some(n => !n.read) && (
+          <button 
+            type="button" 
+            className="mark-all-read-btn"
+            onClick={handleMarkAllAsRead}
+          >
+            Segna tutte come lette
+          </button>
+        )}
+      </div>
       <div className="notifications-list">
         {notifications.length === 0 ? (
           <div className="notifications-empty">Non hai nuove notifiche.</div>

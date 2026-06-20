@@ -9,20 +9,16 @@ export default function AppShell() {
 
   useEffect(() => {
     const setupNotifications = async () => {
-      // Se il browser non supporta le notifiche, non facciamo nulla
       if (!('Notification' in window)) return
 
-      // Chiediamo il permesso nativo al browser se l'utente non ha mai scelto
       let permission = Notification.permission
       if (permission === 'default') {
         permission = await Notification.requestPermission()
       }
 
-      // Se il permesso è garantito e ci sono notifiche non lette...
       if (permission === 'granted' && unreadCount > 0) {
         const hasShown = sessionStorage.getItem('startupNotifShown')
         
-        // ...e se non l'abbiamo già mostrata in questa sessione
         if (!hasShown) {
           const title = 'ExpenseTracker'
           const options = {
@@ -31,9 +27,14 @@ export default function AppShell() {
             badge: '/favicon.svg',
           }
 
-          // Usiamo il Service Worker per sparare la notifica (migliore su Android/PWA)
           if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.ready.then(reg => reg.showNotification(title, options)).catch(() => new Notification(title, options))
+            navigator.serviceWorker.getRegistration().then(reg => {
+              if (reg) {
+                reg.showNotification(title, options).catch(() => new Notification(title, options))
+              } else {
+                new Notification(title, options)
+              }
+            }).catch(() => new Notification(title, options))
           } else {
             new Notification(title, options)
           }
@@ -44,7 +45,7 @@ export default function AppShell() {
     }
 
     setupNotifications()
-  }, [unreadCount]) // L'effetto si riattiva quando il database scarica il numero di notifiche
+  }, [unreadCount])
 
   return (
     <div className="app-shell">
