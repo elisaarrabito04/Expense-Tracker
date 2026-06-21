@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTransactions } from '../context/TransactionsContext'
 import { getTransactionById, subscribeToTransactionDeletion } from '../services/transactionsService'
 import { getUsersByIds } from '../services/usersService'
-import type { AppUser, Tag, Transaction, ExpenseTransaction, SettlementTransaction } from '../types/types'
+import type { AppUser, Transaction, ExpenseTransaction, SettlementTransaction } from '../types/types'
 import ExpenseForm from '../components/transactions/ExpenseForm'
 import SettlementForm from '../components/transactions/SettlementForm'
 import './AddTransaction.css'
@@ -21,13 +21,13 @@ export default function EditTransaction() {
 
   // Prepopoliamo immediatamente lo stato se abbiamo i dati in cache
   const [transaction, setTransaction] = useState<Transaction | null>(navState?.initialTransaction || null)
-  
+
   // Recuperiamo i dati globali per evitare fetch inutili
   const { userTransactions, knownTags, knownParticipants, isLoading: isContextLoading } = useTransactions()
-  
+
 
   const [initialOtherUser, setInitialOtherUser] = useState<AppUser | null>(null)
-  
+
   // Blocchiamo la UI solo se NON abbiamo la transazione in memoria
   const [isLoading, setIsLoading] = useState(!navState?.initialTransaction)
   // Mostriamo un indicatore "soft" se stiamo aggiornando in background
@@ -49,7 +49,7 @@ export default function EditTransaction() {
         if (!tx) {
           tx = await getTransactionById(id!)
         }
-        
+
         if (!tx) {
           setError('Transazione non trovata.')
           return
@@ -58,21 +58,21 @@ export default function EditTransaction() {
         // 2. Controllo di sicurezza addizionale (nel caso in cui un utente provi 
         // ad accedere direttamente all'URL ignorando i controlli della Home)
         if (!tx.participantIds.includes(currentUser!.id)) {
-           setError('Non hai i permessi per modificare questa transazione, poiché non vi partecipi.')
-           return
+          setError('Non hai i permessi per modificare questa transazione, poiché non vi partecipi.')
+          return
         }
 
         if (tx.status === 'deleted') {
-           setError('Non puoi modificare una transazione che è stata eliminata.')
-           return
+          setError('Non puoi modificare una transazione che è stata eliminata.')
+          return
         }
 
         if (tx.status === 'pending' && tx.createdByUserId !== currentUser!.id) {
-           setError('Solo il creatore può modificare una transazione in attesa di accettazione.')
-           return
+          setError('Solo il creatore può modificare una transazione in attesa di accettazione.')
+          return
         }
 
-         if (tx.status === 'revision' && tx.createdByUserId !== currentUser!.id) {
+        if (tx.status === 'revision' && tx.createdByUserId !== currentUser!.id) {
           setError('Solo il creatore può modificare una transazione in revisione.')
           return
         }
@@ -115,9 +115,9 @@ export default function EditTransaction() {
 
   // Gestione centralizzata degli stati di fallback (non autenticato, caricamento, errore)
   if (!currentUser) return <FallbackState type="unauthorized" />
-  
+
   if (isLoading) return <FallbackState type="loading" message="Caricamento transazione in corso..." />
-  
+
   if (error) {
     // Se si verifica un errore di recupero/sicurezza forniamo anche l'azione per tornare alla Home
     return <FallbackState type="error" message={error} action={{ label: 'Torna alla Home', onClick: () => navigate('/home') }} />
@@ -137,10 +137,10 @@ export default function EditTransaction() {
       </header>
 
       {transaction.type === 'expense' ? (
-        <ExpenseForm 
-          currentUser={currentUser as AppUser} 
-          knownTags={knownTags} 
-          knownParticipants={knownParticipants} 
+        <ExpenseForm
+          currentUser={currentUser as AppUser}
+          knownTags={knownTags}
+          knownParticipants={knownParticipants}
           userTransactions={userTransactions}
           onSuccess={() => navigate('/home')}
           initialTransaction={transaction as ExpenseTransaction}
@@ -148,9 +148,9 @@ export default function EditTransaction() {
           onCancel={() => navigate('/home')}
         />
       ) : (
-        <SettlementForm 
-          currentUser={currentUser as AppUser} 
-          knownParticipants={knownParticipants} 
+        <SettlementForm
+          currentUser={currentUser as AppUser}
+          knownParticipants={knownParticipants}
           onSuccess={() => navigate('/home')}
           initialTransaction={transaction as SettlementTransaction}
           initialOtherUser={initialOtherUser}
