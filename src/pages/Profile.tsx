@@ -8,6 +8,7 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus'
 import { useDialog } from '../context/DialogContext'
 import type { AppUser, ExpenseTransaction } from '../types/types'
 import { getTemplatesForUser, deleteTemplate } from '../services/templatesService'
+import { getFirebaseErrorMessage } from '../utils/firebaseErrors'
 
 import './Profile.css'
 import FallbackState from '../components/FallbackState'
@@ -174,7 +175,7 @@ export default function Profile() {
       })
       setIsEditing(false) // Chiudiamo il form se è andato tutto a buon fine
     } catch (err: any) {
-      setUpdateError(err.message || 'Errore durante l\'aggiornamento.')
+      setUpdateError(getFirebaseErrorMessage(err))
     } finally {
       setIsUpdating(false)
     }
@@ -233,7 +234,13 @@ export default function Profile() {
             <h1 className="profile-title">Ciao, {currentUser.displayName}!</h1>
             <p className="profile-subtitle">email: {currentUser.email}</p>
             {currentUser.nickname && <p className="profile-nickname">nickname: {currentUser.nickname}</p>}
-            <button className="profile-edit-btn" onClick={handleEditClick}>Modifica Profilo</button>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '1rem' }}>
+              <button className="profile-edit-btn" onClick={handleEditClick} style={{ margin: 0 }}>Modifica Profilo</button>
+              <button className="profile-edit-btn" onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', margin: 0, backgroundColor: '#dc3545', color: 'white', border: 'none' }}>
+                <img src={logoutIcon} alt="Logout" style={{ width: '18px', height: '18px', filter: 'brightness(0) invert(1)' }} />
+                Logout
+              </button>
+            </div>
           </>
         )}
       </header>
@@ -307,12 +314,6 @@ export default function Profile() {
         </ul>
       )}
 
-      <br /><br />
-
-      <button className="submit-btn cancel-btn" onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', margin: '0 auto' }}>
-        <img src={logoutIcon} alt="Logout" style={{ width: '20px', height: '20px', filter: 'brightness(0) invert(1)' }} />
-        Logout
-      </button>
     </div>
   )
 }

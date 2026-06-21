@@ -323,8 +323,8 @@
 .bottom-sheet-content {
   background: #ffffff;
   width: 100%;
-  height: 40vh; /* Fallback per browser datati */
-  height: 40dvh; /* Un buon compromesso: più basso dell'85%, ma abbastanza alto per la tastiera */
+  height: 80vh; /* Fallback per browser datati */
+  height: 80dvh; /* Più alto per permettere la selezione agevole anche con tastiera */
   border-radius: 20px 20px 0 0;
   padding: 1.5rem;
   padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); /* Protegge la UI contro l'home indicator di iOS */

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { loginWithEmail, registerWithEmail } from '../services/authService'
 import { isNicknameTaken } from '../services/usersService'
+import { getFirebaseErrorMessage } from '../utils/firebaseErrors'
 import './AuthPage.css'
 
 type Mode = 'login' | 'register'
@@ -66,10 +67,8 @@ export default function AuthPage() {
       // L'accesso effettivo alla pagina protetta verrà comunque sbloccato
       // solo quando AuthContext avrà risolto anche currentUser.
       navigate('/home', { replace: true })
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Operazione non riuscita.'
-      setError(message)
+    } catch (err: any) {
+      setError(getFirebaseErrorMessage(err))
     } finally {
       setIsSubmitting(false)
     }

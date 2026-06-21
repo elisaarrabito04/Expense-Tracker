@@ -13,6 +13,7 @@ import {
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
 import { db } from '../lib/firebase'
+import { getUserById } from './usersService'
 import type {
   ExpenseTransaction,
   SettlementTransaction,
@@ -91,7 +92,8 @@ function addNotificationToBatch(
   type: NotificationType,
   txId: string,
   txTitle: string,
-  actorId: string
+  actorId: string,
+  actorName: string
 ) {
   const notifRef = doc(collection(db, 'users', targetUserId, 'notifications'))
   const notification: AppNotification = {
@@ -100,6 +102,7 @@ function addNotificationToBatch(
     txId,
     txTitle,
     actorId,
+    actorName,
     read: false,
     createdAt: new Date().toISOString(), // Usiamo ISO string locale per uniformità offline/online
   }
@@ -339,16 +342,19 @@ export async function createExpense(
     updatedAt: serverTimestamp(),
   }
 
-  // 4. Batch Write: Transazione + Notifiche
   const batch = writeBatch(db)
   const txRef = doc(collection(db, TRANSACTIONS_COLLECTION))
 
   batch.set(txRef, payload)
 
+  // Calcoliamo l'actorName una sola volta
+  const actor = await getUserById(newTransactionData.createdByUserId)
+  const actorName = actor?.displayName || 'Un nuovo utente'
+
   // Invio notifica 'added' a tutti tranne al creatore
   participantIds.forEach((userId) => {
     if (userId !== newTransactionData.createdByUserId) {
-      addNotificationToBatch(batch, userId, 'added', txRef.id, newTransactionData.description, newTransactionData.createdByUserId)
+      addNotificationToBatch(batch, userId, 'added', txRef.id, newTransactionData.description, newTransactionData.createdByUserId, actorName)
     }
   })
 
@@ -383,10 +389,13 @@ export async function createSettlement(
 
   batch.set(txRef, payload)
 
+  const actor = await getUserById(newTransactionData.createdByUserId)
+  const actorName = actor?.displayName || 'Un nuovo utente'
+
   // Invio notifica 'added' a tutti tranne al creatore
   participantIds.forEach((userId) => {
     if (userId !== newTransactionData.createdByUserId) {
-      addNotificationToBatch(batch, userId, 'added', txRef.id, newTransactionData.description, newTransactionData.createdByUserId)
+      addNotificationToBatch(batch, userId, 'added', txRef.id, newTransactionData.description, newTransactionData.createdByUserId, actorName)
     }
   })
 
@@ -434,6 +443,9 @@ export async function updateExpense(
   })
 
   // CALCOLO NOTIFICHE
+  const actor = await getUserById(updaterId)
+  const actorName = actor?.displayName || 'Un nuovo utente'
+
   const isStatusChangeOnly = updaterId !== updatedTransaction.createdByUserId &&
     oldTx.participantStatuses[updaterId] !== updatedTransaction.participantStatuses[updaterId];
 
@@ -445,7 +457,7 @@ export async function updateExpense(
       if (userId === updatedTransaction.createdByUserId) {
         const newStatus = updatedTransaction.participantStatuses[updaterId]
         if (newStatus === 'accepted' || newStatus === 'rejected') {
-          addNotificationToBatch(batch, userId, newStatus, id, updatedTransaction.description, updaterId)
+          addNotificationToBatch(batch, userId, newStatus, id, updatedTransaction.description, updaterId, actorName)
         }
       }
       return
@@ -453,14 +465,14 @@ export async function updateExpense(
 
     // Se è una vera modifica ai dati della transazione
     if (!oldParticipantIds.has(userId)) {
-      addNotificationToBatch(batch, userId, 'added', id, updatedTransaction.description, updaterId)
+      addNotificationToBatch(batch, userId, 'added', id, updatedTransaction.description, updaterId, actorName)
     } else {
-      addNotificationToBatch(batch, userId, 'modified', id, updatedTransaction.description, updaterId)
+      addNotificationToBatch(batch, userId, 'modified', id, updatedTransaction.description, updaterId, actorName)
     }
   })
   oldTx.participantIds.forEach((userId) => {
     if (userId !== updaterId && !newParticipantIds.has(userId)) {
-      addNotificationToBatch(batch, userId, 'removed', id, oldTx.description, updaterId)
+      addNotificationToBatch(batch, userId, 'removed', id, oldTx.description, updaterId, actorName)
     }
   })
 
@@ -497,6 +509,9 @@ export async function updateSettlement(
     updatedAt: serverTimestamp(),
   })
 
+  const actor = await getUserById(updaterId)
+  const actorName = actor?.displayName || 'Un nuovo utente'
+
   const isStatusChangeOnly = updaterId !== updatedTransaction.createdByUserId &&
     oldTx.participantStatuses[updaterId] !== updatedTransaction.participantStatuses[updaterId];
 
@@ -507,13 +522,13 @@ export async function updateSettlement(
       if (userId === updatedTransaction.createdByUserId) {
         const newStatus = updatedTransaction.participantStatuses[updaterId]
         if (newStatus === 'accepted' || newStatus === 'rejected') {
-          addNotificationToBatch(batch, userId, newStatus, id, updatedTransaction.description, updaterId)
+          addNotificationToBatch(batch, userId, newStatus, id, updatedTransaction.description, updaterId, actorName)
         }
       }
       return
     }
 
-    addNotificationToBatch(batch, userId, 'modified', id, updatedTransaction.description, updaterId)
+    addNotificationToBatch(batch, userId, 'modified', id, updatedTransaction.description, updaterId, actorName)
   })
 
   await batch.commit()
@@ -551,9 +566,12 @@ export async function deleteTransaction(transactionId: string, currentUserId: st
     deletedByUserId: currentUserId,
   })
 
+  const actor = await getUserById(currentUserId)
+  const actorName = actor?.displayName || 'Un nuovo utente'
+
   oldTx.participantIds.forEach((userId) => {
     if (userId !== currentUserId) {
-      addNotificationToBatch(batch, userId, 'deleted', transactionId, oldTx.description, currentUserId)
+      addNotificationToBatch(batch, userId, 'deleted', transactionId, oldTx.description, currentUserId, actorName)
     }
   })
 

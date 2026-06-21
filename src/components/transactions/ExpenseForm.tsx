@@ -11,6 +11,7 @@ import { buildNewExpense } from '../../utils/transactionFactories'
 import { createTemplate, updateTemplate, checkTemplateExists } from '../../services/templatesService'
 import { getSuggestedClusters, getAvailableUsersIds } from '../../utils/transactions'
 import { useNetworkStatus } from '../../hooks/useNetworkStatus' // per non poter creare un template offline (dato che serve sapere se il nome esiste già)
+import FallbackState from '../FallbackState'
 
 // Helper per gestire in modo pulito il salvataggio ottimistico
 // senza dover ripetere la logica if/else in ogni punto di salvataggio.
@@ -53,25 +54,98 @@ export default function ExpenseForm({
   const [date, setDate] = useState<string>(source ? source.date : new Date().toISOString().split('T')[0])
   const [note, setNote] = useState<string>(source?.note || '')
 
-  const [selectedTag, setSelectedTag] = useState<Tag | null>(() => {
-    if (source?.tagId) return knownTags.find(t => t.id === source.tagId) || null
-    return null
-  })
-  
-  const [selectedPayer, setSelectedPayer] = useState<AppUser | null>(() => {
-    if (source?.payerId) return knownParticipants.find(p => p.id === source.payerId) || currentUser
-    return currentUser // Default al creatore della spesa
-  })
+  // --- GESTIONE DATI MANCANTI (ES. UTENTI NUOVI NEL TEMPLATE) ---
+  const [extraUsers, setExtraUsers] = useState<AppUser[]>([])
+  const [extraTags, setExtraTags] = useState<Tag[]>([])
 
-  // Inizializzazione "lazy" (con callback) per evitare computazioni a ogni render:
+  const combinedParticipants = useMemo(() => [...knownParticipants, ...extraUsers], [knownParticipants, extraUsers])
+  const combinedTags = useMemo(() => [...knownTags, ...extraTags], [knownTags, extraTags])
+
+  // Inizializzazione "lazy" per i partecipanti selezionati
   const [selectedParticipants, setSelectedParticipants] = useState<AppUser[]>(() => {
     if (source?.shares) {
-      const mapped = source.shares.map(s => s.userId === currentUser.id ? currentUser : knownParticipants.find(p => p.id === s.userId)).filter((p): p is AppUser => p !== undefined)
+      const mapped = source.shares.map(s => s.userId === currentUser.id ? currentUser : combinedParticipants.find(p => p.id === s.userId)).filter((p): p is AppUser => p !== undefined)
       if (mapped.length > 0) return mapped
     }
-    // Altrimenti (nuova spesa) inseriamo di default l'utente corrente
     return currentUser ? [currentUser] : []
   })
+
+  const [selectedTag, setSelectedTag] = useState<Tag | null>(() => {
+    if (source?.tagId) return combinedTags.find(t => t.id === source.tagId) || null
+    return null
+  })
+
+  const [selectedPayer, setSelectedPayer] = useState<AppUser | null>(() => {
+    if (source?.payerId) return combinedParticipants.find(p => p.id === source.payerId) || currentUser
+    return currentUser
+  })
+
+  // Sincronizzazione asincrona dei dati mancanti dal DB (per template e modifiche)
+  const [isPreparing, setIsPreparing] = useState(!!source)
+
+  useEffect(() => {
+    if (!source) return
+
+    const fetchMissingData = async () => {
+      try {
+        const neededUserIds = [...source.shares.map(s => s.userId), source.payerId]
+        const availableUserIds = new Set(combinedParticipants.map(p => p.id).concat(currentUser.id))
+        
+        const missingUserIds = neededUserIds.filter(id => !availableUserIds.has(id))
+        if (missingUserIds.length > 0) {
+          const { getUsersByIds } = await import('../../services/usersService')
+          const downloadedUsers = await getUsersByIds(missingUserIds)
+          if (downloadedUsers.length > 0) {
+            setExtraUsers(prev => {
+              const newUsers = downloadedUsers.filter(du => !prev.some(pu => pu.id === du.id))
+              return [...prev, ...newUsers]
+            })
+          }
+        }
+
+        if (source.tagId && !combinedTags.some(t => t.id === source.tagId)) {
+          const { getTagById } = await import('../../services/tagsService')
+          const downloadedTag = await getTagById(source.tagId)
+          if (downloadedTag) {
+            setExtraTags(prev => prev.some(t => t.id === downloadedTag.id) ? prev : [...prev, downloadedTag])
+          }
+        }
+      } catch (err) {
+        console.error("Errore nel recupero dati mancanti:", err)
+      } finally {
+        setIsPreparing(false)
+      }
+    }
+
+    fetchMissingData()
+  }, [source])
+
+  // Sincronizza i selettori non appena i dati extra arrivano
+  useEffect(() => {
+    if (!source) return
+    
+    // Aggiorniamo i partecipanti selezionati
+    const mappedParticipants = source.shares.map(s => s.userId === currentUser.id ? currentUser : combinedParticipants.find(p => p.id === s.userId)).filter((p): p is AppUser => p !== undefined)
+    if (mappedParticipants.length > 0 && mappedParticipants.length !== selectedParticipants.length) {
+      setSelectedParticipants(mappedParticipants)
+    }
+
+    // Aggiorniamo il pagante
+    if (source.payerId) {
+      const payer = combinedParticipants.find(p => p.id === source.payerId)
+      if (payer && (!selectedPayer || selectedPayer.id !== payer.id)) {
+        setSelectedPayer(payer)
+      }
+    }
+
+    // Aggiorniamo il tag
+    if (source.tagId) {
+      const tag = combinedTags.find(t => t.id === source.tagId)
+      if (tag && (!selectedTag || selectedTag.id !== tag.id)) {
+        setSelectedTag(tag)
+      }
+    }
+  }, [combinedParticipants, combinedTags, source])
 
   // Ref per tracciare quale bottone è stato premuto ("expense" o "template")
   const submitAction = useRef<'expense' | 'template'>('expense')
@@ -91,7 +165,7 @@ export default function ExpenseForm({
   // 2. Funzione per aggiungere un intero cluster di partecipanti
   const handleAddCluster = (clusterParticipantIds: string[]) => {
     const usersToAdd = clusterParticipantIds
-      .map((id) => knownParticipants.find((u) => u.id === id))
+      .map((id) => combinedParticipants.find((u) => u.id === id))
       .filter((u): u is AppUser => u !== undefined)
 
     setSelectedParticipants((prev) => {
@@ -101,31 +175,6 @@ export default function ExpenseForm({
       return [...prev, ...newUsers]
     })
   }
-
-  // --- SINCRONIZZAZIONE BACKGROUND ---
-  // Ascoltiamo l'arrivo dei dati asincroni (se mancavano e sono stati scaricati in un secondo momento dal genitore)
-  const initializedTxId = useRef<string | null>(null)
-
-  useEffect(() => {
-    if (initialTransaction && initializedTxId.current !== initialTransaction.id) {
-       const neededUserIds = [...initialTransaction.shares.map(s => s.userId), initialTransaction.payerId]
-       const availableUserIds = new Set(knownParticipants.map(p => p.id).concat(currentUser.id))
-       const allUsersAvailable = neededUserIds.every(id => availableUserIds.has(id))
-
-       const neededTagId = initialTransaction.tagId
-       const allTagsAvailable = !neededTagId || knownTags.some(t => t.id === neededTagId)
-
-       if (allUsersAvailable && allTagsAvailable) {
-          if (neededTagId) setSelectedTag(knownTags.find(t => t.id === neededTagId) || null)
-          setSelectedPayer(knownParticipants.find(p => p.id === initialTransaction.payerId) || currentUser)
-          
-          const mappedParticipants = initialTransaction.shares.map(s => s.userId === currentUser.id ? currentUser : knownParticipants.find(p => p.id === s.userId)).filter((p): p is AppUser => p !== undefined)
-          if (mappedParticipants.length > 0) setSelectedParticipants(mappedParticipants)
-
-          initializedTxId.current = initialTransaction.id
-       }
-    }
-  }, [initialTransaction, knownParticipants, knownTags, currentUser])
 
   const [splitType, setSplitType] = useState<'equal' | 'custom'>(source?.splitType === 'custom' ? 'custom' : 'equal')
   const [customShares, setCustomShares] = useState<Record<string, string>>(() => {
@@ -144,6 +193,11 @@ export default function ExpenseForm({
   const isOffline = !isOnline
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  if (isPreparing) {
+    // Evita il fastidioso "flicker" o "re-render" nascondendo il form finché non ha tutti gli utenti (anche quelli pescati offline)
+    return <FallbackState type="loading" message="Preparazione form in corso..." />
+  }
 
   // Valori numerici calcolati in tempo reale
   const numericAmount = parseFloat(amount) || 0
@@ -183,9 +237,9 @@ export default function ExpenseForm({
 
     // --- GESTIONE ACCETTAZIONE PREVENTIVA ---
     const participantStatuses: Record<string, 'accepted' | 'pending' | 'rejected'> = {}
-    
+
     const activeUserIds = getAvailableUsersIds(userTransactions)
-    
+
     selectedParticipants.forEach(user => {
       if (user.id === currentUser.id) {
         participantStatuses[user.id] = 'accepted' // Il creatore/utente corrente accetta sempre
@@ -253,7 +307,7 @@ export default function ExpenseForm({
         createdByUserId: currentUser.id,
         participantIds,
         status: 'template',
-        participantStatuses, 
+        participantStatuses,
         templateName: title.trim(), // Usiamo il titolo della spesa come nome del template
       }
 
@@ -262,7 +316,7 @@ export default function ExpenseForm({
       } else {
         await executeOptimisticWrite(createTemplate(currentUser.id, templatePayload))
       }
-      
+
       onSuccess()
       return
     }
@@ -270,7 +324,7 @@ export default function ExpenseForm({
     try {
       if (initialTransaction) {
         // --- RAMO UPDATE ---
-        
+
         // 1. Calcoliamo quali campi sono stati effettivamente modificati
         const changedFields: string[] = []
         if (initialTransaction.amount !== numericAmount) changedFields.push('Importo')
@@ -280,12 +334,12 @@ export default function ExpenseForm({
         if (initialTransaction.payerId !== selectedPayer.id) changedFields.push('Pagante')
         if (initialTransaction.tagId !== (selectedTag ? selectedTag.id : null)) changedFields.push('Tag')
         if (initialTransaction.splitType !== splitType) changedFields.push('Tipo divisione')
-        
+
         // Confronto base delle quote
         const oldShares = initialTransaction.shares
         const sharesChanged = oldShares.length !== shares.length || oldShares.some(old => {
-           const newS = shares.find(s => s.userId === old.userId)
-           return !newS || newS.amount !== old.amount
+          const newS = shares.find(s => s.userId === old.userId)
+          return !newS || newS.amount !== old.amount
         })
         if (sharesChanged) changedFields.push('Quote/Partecipanti')
 
@@ -331,7 +385,7 @@ export default function ExpenseForm({
           status: txStatus,
           participantStatuses,
         })
-        
+
         // Eseguiamo il salvataggio sfruttando l'helper
         await executeOptimisticWrite(createExpense(payload))
       }
@@ -344,8 +398,8 @@ export default function ExpenseForm({
   }
 
   return (
-    <form 
-      onSubmit={handleSubmit} 
+    <form
+      onSubmit={handleSubmit}
       className="transaction-form"
       onKeyDown={(e) => {
         // Previene il submit del form se si preme Invio in un qualsiasi campo di testo (es. barra di ricerca del bottom sheet)
@@ -380,15 +434,15 @@ export default function ExpenseForm({
       <div className="expense-specifics">
         <SingleUserSelector
           label="Chi ha pagato? *"
-          knownUsers={knownParticipants}
+          knownUsers={combinedParticipants}
           selectedUser={selectedPayer}
           onSelectUser={setSelectedPayer}
           currentAppUser={currentUser}
           excludeCurrentUser={false}
         />
 
-        <TagSelector knownTags={knownTags} selectedTag={selectedTag} onSelectTag={setSelectedTag} currentUserId={currentUser.id} />
-        
+        <TagSelector knownTags={combinedTags} selectedTag={selectedTag} onSelectTag={setSelectedTag} currentUserId={currentUser.id} />
+
         {/* 3. SEZIONE CLUSTER DINAMICI (SUGGERIMENTI) POSIZIONATA SOPRA IL SELETTORE MANUALE */}
         {suggestedClusters.length > 0 && (
           <div className="form-group cluster-suggestions-group" style={{ marginBottom: '0.2rem' }}>
@@ -397,7 +451,7 @@ export default function ExpenseForm({
               {suggestedClusters.map((cluster) => {
                 // Creiamo un'etichetta prendendo solo il nome (prima parola) di ogni partecipante
                 const names = cluster.participantIds
-                  .map((id) => knownParticipants.find((u) => u.id === id)?.displayName.split(' ')[0] || 'Sconosciuto')
+                  .map((id) => combinedParticipants.find((u) => u.id === id)?.displayName.split(' ')[0] || 'Sconosciuto')
                   .join(' + ')
 
                 return (
@@ -417,7 +471,7 @@ export default function ExpenseForm({
         )}
 
         <ParticipantSelector
-          knownParticipants={knownParticipants}
+          knownParticipants={combinedParticipants}
           selectedParticipants={selectedParticipants}
           onToggleParticipant={(user) => {
             setSelectedParticipants((prev) => {
@@ -461,7 +515,7 @@ export default function ExpenseForm({
             Annulla
           </button>
         )}
-        
+
         {isEditingTemplate ? (
           <button type="submit" className="submit-btn" disabled={isSubmitting || isSyncing || isOffline} onClick={() => submitAction.current = 'template'} style={{ flex: 1, backgroundColor: '#e6fcf5', color: '#099268', border: '1px solid #20c997', minWidth: '140px' }}>
             {isOffline ? 'Offline' : (isSubmitting ? 'Salvataggio...' : 'Aggiorna Modello')}
@@ -474,7 +528,7 @@ export default function ExpenseForm({
                 {isOffline ? 'Offline' : (isSubmitting && submitAction.current === 'template' ? 'Salvataggio...' : 'Salva come modello')}
               </button>
             )}
-            
+
             <button type="submit" className="submit-btn" disabled={isSubmitting || isSyncing} onClick={() => submitAction.current = 'expense'} style={{ flex: 2, minWidth: '140px' }}>
               {isSubmitting && submitAction.current === 'expense' ? 'Salvataggio...' : (initialTransaction ? 'Aggiorna Spesa' : 'Salva Spesa')}
             </button>

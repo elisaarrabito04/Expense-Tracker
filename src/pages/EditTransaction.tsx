@@ -3,7 +3,6 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTransactions } from '../context/TransactionsContext'
 import { getTransactionById, subscribeToTransactionDeletion } from '../services/transactionsService'
-import { getTagById } from '../services/tagsService'
 import { getUsersByIds } from '../services/usersService'
 import type { AppUser, Tag, Transaction, ExpenseTransaction, SettlementTransaction } from '../types/types'
 import ExpenseForm from '../components/transactions/ExpenseForm'
@@ -26,8 +25,7 @@ export default function EditTransaction() {
   // Recuperiamo i dati globali per evitare fetch inutili
   const { userTransactions, knownTags, knownParticipants, isLoading: isContextLoading } = useTransactions()
   
-  const [fetchedUsers, setFetchedUsers] = useState<AppUser[]>([])
-  const [fetchedTags, setFetchedTags] = useState<Tag[]>([])
+
   const [initialOtherUser, setInitialOtherUser] = useState<AppUser | null>(null)
   
   // Blocchiamo la UI solo se NON abbiamo la transazione in memoria
@@ -79,32 +77,8 @@ export default function EditTransaction() {
           return
         }
 
-        // 3. Prefill asincrono degli OGGETTI COMPLETI
-        if (tx.type === 'expense') {
-          // Estraiamo tutti gli ID degli utenti coinvolti nella spesa
-          const participantIds = tx.shares.map(s => s.userId)
-          if (!participantIds.includes(tx.payerId)) {
-             participantIds.push(tx.payerId)
-          }
-          const uniqueIds = Array.from(new Set(participantIds))
-          
-          // Controlliamo se ci manca qualche utente dalla nostra cache knownParticipants
-          const missingIds = uniqueIds.filter(uid => uid !== currentUser!.id && !knownParticipants.some(kp => kp.id === uid))
-          
-          if (missingIds.length > 0) {
-             const downloadedUsers = await getUsersByIds(missingIds)
-             setFetchedUsers(downloadedUsers)
-          }
-
-          if (tx.tagId) {
-             // Cerchiamo nella cache, altrimenti su DB
-             const t = knownTags.find(kt => kt.id === tx!.tagId) 
-             if (!t) {
-                const downloadedTag = await getTagById(tx.tagId)
-                if (downloadedTag) setFetchedTags([downloadedTag])
-             }
-          }
-        } else if (tx.type === 'settlement') {
+        // 3. Prefill asincrono per Settlement
+        if (tx.type === 'settlement') {
           // Nel rimborso, estraiamo l'ID dell'ALTRA persona e ne recuperiamo il profilo
           const otherId = tx.fromUserId === currentUser!.id ? tx.toUserId : tx.fromUserId
           const other = knownParticipants.find(p => p.id === otherId) || (await getUsersByIds([otherId]))[0]
@@ -165,8 +139,8 @@ export default function EditTransaction() {
       {transaction.type === 'expense' ? (
         <ExpenseForm 
           currentUser={currentUser as AppUser} 
-          knownTags={[...knownTags, ...fetchedTags]} 
-          knownParticipants={[...knownParticipants, ...fetchedUsers]} 
+          knownTags={knownTags} 
+          knownParticipants={knownParticipants} 
           userTransactions={userTransactions}
           onSuccess={() => navigate('/home')}
           initialTransaction={transaction as ExpenseTransaction}

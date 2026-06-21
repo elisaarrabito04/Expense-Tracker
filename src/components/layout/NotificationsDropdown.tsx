@@ -29,19 +29,21 @@ export default function NotificationsDropdown({ isOpen, onClose }: Props) {
   }
 
   const getNotificationMessage = (notif: AppNotification) => {
-    // Cerchiamo chi ha compiuto l'azione tra le persone che già conosciamo
-    const actor = knownParticipants.find(p => p.id === notif.actorId)
-    const actorName = actor ? actor.displayName : 'Un nuovo utente'
+    // Ora l'actorName è salvato in modo permanente nella notifica!
+    // Fallback di retrocompatibilità per le vecchie notifiche già salvate nel DB:
+    const actorName = notif.actorName
+      || knownParticipants.find(p => p.id === notif.actorId)?.displayName
+      || 'Utente sconosciuto'
     const boldTitle = <strong>{notif.txTitle}</strong>
 
     // È uno sconosciuto se NON abbiamo transazioni ATTIVE in comune
-    const isStranger = !userTransactions.some(tx => 
+    const isStranger = !userTransactions.some(tx =>
       tx.status === 'active' && tx.participantIds.includes(notif.actorId)
     )
 
     switch (notif.type) {
       case 'added':
-        if (isStranger) return <><strong>Un nuovo utente</strong> ({actorName}) ti ha aggiunto alla transazione in attesa {boldTitle}.</>
+        if (isStranger) return <><strong>Un nuovo utente ({actorName})</strong> ti ha aggiunto alla transazione in attesa {boldTitle}.</>
         return <><strong>{actorName}</strong> ti ha aggiunto a {boldTitle}.</>
       case 'modified':
         return <><strong>{actorName}</strong> ha modificato {boldTitle}.</>
@@ -65,8 +67,8 @@ export default function NotificationsDropdown({ isOpen, onClose }: Props) {
       <div className="notifications-header">
         <h4>Notifiche</h4>
         {notifications.length > 0 && notifications.some(n => !n.read) && (
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="mark-all-read-btn"
             onClick={handleMarkAllAsRead}
           >

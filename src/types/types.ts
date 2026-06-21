@@ -6,6 +6,7 @@ export type AppNotification = {
   txId: string
   txTitle: string // Salviamo il titolo per avere contesto se la tx viene eliminata!
   actorId: string // Chi ha scatenato la notifica
+  actorName: string // Nome di chi ha scatenato la notifica, salvato per evitare problemi se l'utente viene eliminato o per sconosciuti
   read: boolean
   createdAt: string
 }
