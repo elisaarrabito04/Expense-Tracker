@@ -100,17 +100,18 @@ export async function createOrUpdateAppUser(params: {
 
   if (existingUser) {
     // Se i dati sono identici, evitiamo scritture inutili su Firestore
-    if (existingUser.displayName === normalizedDisplayName) {
+    const newNickname = nickname ? nickname.trim().toLowerCase() : undefined;
+    const nicknameChanged = existingUser.nickname !== newNickname;
+    const displayNameChanged = existingUser.displayName !== normalizedDisplayName;
+
+    if (!displayNameChanged && !nicknameChanged) {
       return existingUser
     }
 
     // È un UPDATE: aggiorniamo solo i dati cambiati senza toccare `createdAt`
-    const updates = {
-      displayName: normalizedDisplayName,
-    }
-    if (nickname) {
-      Object.assign(updates, { nickname: nickname.trim().toLowerCase() })
-    }
+    const updates: Partial<AppUser> = {}
+    if (displayNameChanged) updates.displayName = normalizedDisplayName;
+    if (nicknameChanged && newNickname) updates.nickname = newNickname;
 
     await setDoc(doc(db, 'users', uid), updates, { merge: true })
     return { ...existingUser, ...updates }
