@@ -12,8 +12,6 @@ import Analytics from './pages/Analytics'
 import Profile from './pages/Profile'
 import AuthPage from './pages/AuthPage'
 
-// dove non c'è path, allora la route corrisponde alla route padre (AppShell)
-// e renderizza il componente specificato in element.
 // index element indica che questa route è la route predefinita quando si accede
 // alla route padre (AppShell) senza specificare un percorso aggiuntivo.
 
@@ -26,6 +24,7 @@ ProtectedRoute dà il via libera.
 */
 
 function App() {
+
   return (
     <AuthProvider>
       <DialogProvider>

@@ -1,11 +1,11 @@
-import { useMemo, useState, useRef} from 'react'
+import { useMemo, useState, useRef } from 'react'
 import type { AppUser } from '../../types/types'
 import { useClickOutside } from '../../hooks/useClickOutside'
 
 type PeopleFilterProps = {
-  availablePeople: AppUser[]
-  selectedPersonIds: string[]
-  onTogglePerson: (personId: string) => void
+  availablePeople: AppUser[] // delle active (serve per ricavare i nomi da mostrare)
+  selectedPersonIds: string[] // da HomeFilters
+  onTogglePerson: (personId: string) => void // da Home
   onClearPeople: () => void
 }
 
@@ -31,6 +31,7 @@ export default function PeopleFilter({
   )
 
 
+  // TENDINA FILTRATA
   const filteredPeople = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
 
@@ -45,17 +46,19 @@ export default function PeopleFilter({
   }, [availablePeople, query])
 
 
-
+  // per click su una riga del dropdown
   function handleSelectPerson(personId: string) {
-    onTogglePerson(personId)
+    onTogglePerson(personId) // funzione proveniente da Home
     setQuery('')
     setIsOpen(true) // dropdown ancora aperto per la selezione multipla
   }
 
 
-  
+
   return (
     <div className="filter-field" ref={containerRef}>
+      {/* div è il container principale con il containerRef per useClickOutside*/}
+
       {/* Barra di ricerca per le persone */}
       <div className="filter-search">
         <span className="filter-search__icon" aria-hidden="true">
@@ -74,15 +77,11 @@ export default function PeopleFilter({
             // Quando l'utente digita:
             // - aggiorniamo la query
             // - apriamo il dropdown con i risultati filtrati
-            setQuery(e.target.value)
+            setQuery(e.target.value) // prendo il valore del nodo
             setIsOpen(true)
           }}
         />
       </div>
-
-      {/* Chip delle persone selezionate.
-          Ogni chip può essere cliccato per rimuovere quella persona dal filtro. */}
-      
 
       {/* Dropdown dei risultati */}
       {isOpen && (

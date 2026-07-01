@@ -223,10 +223,10 @@ export async function getTransactionsForUser(userId: string): Promise<Transactio
 
 // API per ascoltare le transazioni in tempo reale.
 // Perfetta per sfruttare la Latency Compensation di Firestore (Optimistic UI)
-// anzichè usare una normale getTransactionForUser in Home.tsx
+// anzichè usare una normale getTransactionForUser
 export function subscribeToTransactionsForUser(
   userId: string,
-  onData: (transactions: Transaction[]) => void, // per aggiornare gli STATES in Home
+  onData: (transactions: Transaction[]) => void,
   onError?: (error: Error) => void
 ): () => void {
   assertNonEmptyString(userId, 'userId')
@@ -255,6 +255,7 @@ export function subscribeToTransactionsForUser(
 
 // Recupera una transazione per id.
 // Utile per la pagina di dettaglio/edit.
+// (in realtà credo non mi serva più, ho inserito in input oldtx)
 export async function getTransactionById(
   transactionId: string
 ): Promise<Transaction | null> {

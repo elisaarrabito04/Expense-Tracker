@@ -9,12 +9,12 @@ import SplitManager from './SplitManager'
 import { createExpense, updateExpense } from '../../services/transactionsService'
 import { buildNewExpense } from '../../utils/transactionFactories'
 import { createTemplate, updateTemplate, checkTemplateExists } from '../../services/templatesService'
+import { getUsersByIds } from '../../services/usersService'
 import { getSuggestedClusters, getAvailableUsersIds } from '../../utils/transactions'
 import { useNetworkStatus } from '../../hooks/useNetworkStatus' // per non poter creare un template offline (dato che serve sapere se il nome esiste già)
 import FallbackState from '../FallbackState'
 
-// Helper per gestire in modo pulito il salvataggio ottimistico
-// senza dover ripetere la logica if/else in ogni punto di salvataggio.
+// Helper per salvataggio ottimistico (che sia nuova spesa, modifica o template)
 async function executeOptimisticWrite(writePromise: Promise<void>) {
   if (!navigator.onLine) {
     writePromise.catch(err => console.error("Errore sync in background offline", err))
@@ -25,12 +25,13 @@ async function executeOptimisticWrite(writePromise: Promise<void>) {
 
 type ExpenseFormProps = {
   currentUser: AppUser
-  userTransactions: Transaction[] // (presi dal genitore nel context) per il calcolo dei cluster
-  knownTags: Tag[] // (presi dal genitore nel context) per mostrare le label
-  knownParticipants: AppUser[] // (presi dal genitore nel context) per poter mostrare i nomi
+  userTransactions: Transaction[] // (presi dal genitore Add nel context) per il calcolo dei cluster
+  knownTags: Tag[] // (presi dal genitore Add, poi filtrati per active) per mostrare le label
+  knownParticipants: AppUser[] // (presi dal genitore Add, poi filtrati per active) per poter mostrare i nomi
   onSuccess: () => void
-  initialTransaction?: ExpenseTransaction // PER IL CLICK SU MODIFICA (per sapere ID, importi, log e tipo di divisione)
-  templateTransaction?: ExpenseTransaction // PER LA PRECOMPILAZIONE DA UN MODELLO
+
+  initialTransaction?: ExpenseTransaction // modifica
+  templateTransaction?: ExpenseTransaction // uso di template
   isSyncing?: boolean // se il padre EditTransaction sta aspettando ancora si sincronizzare la cache con firestore (per evitare race condition, salvataggi su dati vecchi ecc)
   onCancel?: () => void
 }
@@ -46,7 +47,6 @@ export default function ExpenseForm({
   isSyncing,
   onCancel,
 }: ExpenseFormProps) {
-  // --- INIZIALIZZAZIONE DEGLI STATI ---
   const source = initialTransaction || templateTransaction
 
   const [amount, setAmount] = useState<string>(source ? source.amount.toString() : '')
@@ -81,8 +81,7 @@ export default function ExpenseForm({
   })
 
   // Sincronizzazione asincrona dei dati mancanti dal DB (per template e modifiche)
-  const [isPreparing, setIsPreparing] = useState(!!source)
-
+  const [isPreparing, setIsPreparing] = useState(!!source) // !! serve per convertire source in boolean: se esiste source, isPreparing diventa true, altrimenti false
   useEffect(() => {
     if (!source) return
 
@@ -90,10 +89,9 @@ export default function ExpenseForm({
       try {
         const neededUserIds = [...source.shares.map(s => s.userId), source.payerId]
         const availableUserIds = new Set(combinedParticipants.map(p => p.id).concat(currentUser.id))
-        
+
         const missingUserIds = neededUserIds.filter(id => !availableUserIds.has(id))
         if (missingUserIds.length > 0) {
-          const { getUsersByIds } = await import('../../services/usersService')
           const downloadedUsers = await getUsersByIds(missingUserIds)
           if (downloadedUsers.length > 0) {
             setExtraUsers(prev => {
@@ -123,14 +121,12 @@ export default function ExpenseForm({
   // Sincronizza i selettori non appena i dati extra arrivano
   useEffect(() => {
     if (!source) return
-    
-    // Aggiorniamo i partecipanti selezionati
+
     const mappedParticipants = source.shares.map(s => s.userId === currentUser.id ? currentUser : combinedParticipants.find(p => p.id === s.userId)).filter((p): p is AppUser => p !== undefined)
     if (mappedParticipants.length > 0 && mappedParticipants.length !== selectedParticipants.length) {
       setSelectedParticipants(mappedParticipants)
     }
 
-    // Aggiorniamo il pagante
     if (source.payerId) {
       const payer = combinedParticipants.find(p => p.id === source.payerId)
       if (payer && (!selectedPayer || selectedPayer.id !== payer.id)) {
@@ -138,7 +134,6 @@ export default function ExpenseForm({
       }
     }
 
-    // Aggiorniamo il tag
     if (source.tagId) {
       const tag = combinedTags.find(t => t.id === source.tagId)
       if (tag && (!selectedTag || selectedTag.id !== tag.id)) {
@@ -150,19 +145,18 @@ export default function ExpenseForm({
   // Ref per tracciare quale bottone è stato premuto ("expense" o "template")
   const submitAction = useRef<'expense' | 'template'>('expense')
 
-  // 1. Estraiamo gli ID dei partecipanti selezionati per passarli all'algoritmo di clustering
+  // ricavo ID dei partecipanti selezionati per passarli all'algoritmo di clustering
   const selectedParticipantIds = useMemo(
     () => selectedParticipants.map((p) => p.id),
     [selectedParticipants]
   )
 
-  // creiamo una "virtual view" (derived state)
-  // dipende direttamente dall'elenco di transazioni aggiornato
+  // ricavo i cluster
   const suggestedClusters = useMemo(() => {
     return getSuggestedClusters(userTransactions, currentUser.id, selectedParticipantIds)
   }, [userTransactions, currentUser.id, selectedParticipantIds])
 
-  // 2. Funzione per aggiungere un intero cluster di partecipanti
+  // per aggiungere il cluster selezionato ai partecipanti
   const handleAddCluster = (clusterParticipantIds: string[]) => {
     const usersToAdd = clusterParticipantIds
       .map((id) => combinedParticipants.find((u) => u.id === id))
@@ -195,7 +189,7 @@ export default function ExpenseForm({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   if (isPreparing) {
-    // Evita il fastidioso "flicker" o "re-render" nascondendo il form finché non ha tutti gli utenti (anche quelli pescati offline)
+    // Nascondo il form finché non ha tutti gli utenti
     return <FallbackState type="loading" message="Preparazione form in corso..." />
   }
 

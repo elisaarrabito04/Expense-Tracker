@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { AppUser, Transaction, Tag } from '../../types/types'
-import { getUserById,formatCurrency, formatDate } from '../../utils/transactions'
+import { getUserById, formatCurrency, formatDate } from '../../utils/transactions'
 import './TransactionCard.css'
 import PencilIcon from '../../assets/pencil.svg?react'
 import TrashIcon from '../../assets/trash.svg?react'
@@ -16,95 +16,94 @@ type TransactionCardProps = {
   onReject?: (transactionId: string) => void
 }
 
-// prende la transazione specifica e usersMock per le info degli utenti partecipanti
 export default function TransactionCard({
-  tx,
-  users,
-  tags,
-  currentUserId,
+  tx, // da Home
+  users, // da Home (che ha usato il context con il listener)
+  tags, // da Home
+  currentUserId, // da Home
   onEdit,
   onAccept,
   onReject,
   onDelete,
 }: TransactionCardProps) {
-    const [isExpanded, setIsExpanded] = useState(false) // per mostrare/nascondere i dettagli
+  const [isExpanded, setIsExpanded] = useState(false) // per mostrare/nascondere i dettagli
 
-    const formatUserName = (userId: string) => {
-      const user = getUserById(users, userId)
-      if (!user) return 'Utente sconosciuto'
-      if (user.id === currentUserId) return `${user.displayName} (Tu)`
-      return user.nickname ? `${user.displayName} (@${user.nickname})` : user.displayName
+  const formatUserName = (userId: string) => {
+    const user = getUserById(users, userId)
+    if (!user) return 'Utente sconosciuto'
+    if (user.id === currentUserId) return `${user.displayName} (Tu)`
+    return user.nickname ? `${user.displayName} (@${user.nickname})` : user.displayName
+  }
+
+  const creatorName = formatUserName(tx.createdByUserId)
+  const isCreatedByCurrentUser = tx.createdByUserId === currentUserId
+
+  // --- STATI E AZIONI (BANNER) ---
+  const isPendingForCurrentUser = tx.status === 'pending' && tx.participantStatuses?.[currentUserId] === 'pending'
+  const isPendingButAccepted = tx.status === 'pending' && tx.participantStatuses?.[currentUserId] === 'accepted'
+  const isRevisionForCreator = tx.status === 'revision' && isCreatedByCurrentUser
+  const isDeleted = tx.status === 'deleted'
+  const deletedByName = tx.deletedByUserId ? formatUserName(tx.deletedByUserId) : 'Un partecipante'
+
+  const canEditOrDelete = !isDeleted && (tx.status !== 'pending' || isCreatedByCurrentUser)
+
+  const renderStatusBanner = () => {
+    if (isDeleted) {
+      return (
+        <div style={{ backgroundColor: '#f8f9fa', color: '#6c757d', padding: '12px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.9rem', border: '1px solid #dee2e6', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          🗑️ <strong>Eliminata da {deletedByName}</strong>
+        </div>
+      )
     }
 
-    const creatorName = formatUserName(tx.createdByUserId)
-    const isCreatedByCurrentUser = tx.createdByUserId === currentUserId
-
-    // --- STATI E AZIONI (BANNER) ---
-    const isPendingForCurrentUser = tx.status === 'pending' && tx.participantStatuses?.[currentUserId] === 'pending'
-    const isPendingButAccepted = tx.status === 'pending' && tx.participantStatuses?.[currentUserId] === 'accepted'
-    const isRevisionForCreator = tx.status === 'revision' && isCreatedByCurrentUser
-    const isDeleted = tx.status === 'deleted'
-    const deletedByName = tx.deletedByUserId ? formatUserName(tx.deletedByUserId) : 'Un partecipante'
-
-    const canEditOrDelete = !isDeleted && (tx.status !== 'pending' || isCreatedByCurrentUser)
-
-    const renderStatusBanner = () => {
-      if (isDeleted) {
-        return (
-          <div style={{ backgroundColor: '#f8f9fa', color: '#6c757d', padding: '12px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.9rem', border: '1px solid #dee2e6', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            🗑️ <strong>Eliminata da {deletedByName}</strong>
-          </div>
-        )
-      }
-
-      if (isRevisionForCreator) {
-        return (
-          <div style={{ backgroundColor: '#fff3cd', color: '#856404', padding: '8px 12px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.9rem', fontWeight: 500 }}>
-            ⚠️ Un partecipante ha rifiutato. Modifica la transazione per correggerla.
-          </div>
-        )
-      }
-      if (tx.status === 'revision' && !isCreatedByCurrentUser) {
-        return (
-          <div style={{ backgroundColor: '#f8d7da', color: '#721c24', padding: '8px 12px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.9rem', border: '1px solid #f5c6cb' }}>
-            🛑 Transazione in revisione: un partecipante l'ha rifiutata.
-          </div>
-        )
-      }
-      if (isPendingForCurrentUser) {
-        return (
-          <div style={{ backgroundColor: '#eef2ff', color: '#004085', padding: '12px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid #b8daff' }}>
-            <strong>{creatorName} ti ha aggiunto a questa transazione.</strong>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button type="button" onClick={() => onAccept?.(tx.id)} style={{ flex: 1, padding: '6px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Accetta</button>
-              <button type="button" onClick={() => onReject?.(tx.id)} style={{ flex: 1, padding: '6px', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Rifiuta</button>
-            </div>
-          </div>
-        )
-      }
-      if (isPendingButAccepted) {
-        return (
-          <div style={{ backgroundColor: '#f8f9fa', color: '#383d41', padding: '8px 12px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.9rem', border: '1px solid #dae0e5' }}>
-            ⏳ In attesa di accettazione da altri partecipanti.
-          </div>
-        )
-      }
-      return null
+    if (isRevisionForCreator) {
+      return (
+        <div style={{ backgroundColor: '#fff3cd', color: '#856404', padding: '8px 12px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.9rem', fontWeight: 500 }}>
+          ⚠️ Un partecipante ha rifiutato. Modifica la transazione per correggerla.
+        </div>
+      )
     }
+    if (tx.status === 'revision' && !isCreatedByCurrentUser) {
+      return (
+        <div style={{ backgroundColor: '#f8d7da', color: '#721c24', padding: '8px 12px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.9rem', border: '1px solid #f5c6cb' }}>
+          🛑 Transazione in revisione: un partecipante l'ha rifiutata.
+        </div>
+      )
+    }
+    if (isPendingForCurrentUser) {
+      return (
+        <div style={{ backgroundColor: '#eef2ff', color: '#004085', padding: '12px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid #b8daff' }}>
+          <strong>{creatorName} ti ha aggiunto a questa transazione.</strong>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button type="button" onClick={() => onAccept?.(tx.id)} style={{ flex: 1, padding: '6px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Accetta</button>
+            <button type="button" onClick={() => onReject?.(tx.id)} style={{ flex: 1, padding: '6px', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Rifiuta</button>
+          </div>
+        </div>
+      )
+    }
+    if (isPendingButAccepted) {
+      return (
+        <div style={{ backgroundColor: '#f8f9fa', color: '#383d41', padding: '8px 12px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.9rem', border: '1px solid #dae0e5' }}>
+          ⏳ In attesa di accettazione da altri partecipanti.
+        </div>
+      )
+    }
+    return null
+  }
 
-    if (tx.type === 'expense') {
-        const payerName = formatUserName(tx.payerId)
-        const participantsCount = tx.shares.length        
-        const tagObject = tx.tagId ? tags.find(t => t.id === tx.tagId) : null
-        const tagLabel = tagObject ? tagObject.label : ''
-        const participantsShares = tx.shares.map((share) => {
-        const userName = formatUserName(share.userId)
+  if (tx.type === 'expense') {
+    const payerName = formatUserName(tx.payerId)
+    const participantsCount = tx.shares.length
+    const tagObject = tx.tagId ? tags.find(t => t.id === tx.tagId) : null
+    const tagLabel = tagObject ? tagObject.label : ''
+    const participantsShares = tx.shares.map((share) => {
+      const userName = formatUserName(share.userId)
 
-        return {
-            userId: share.userId,
-            userName,
-            amount: share.amount,
-        }
+      return {
+        userId: share.userId,
+        userName,
+        amount: share.amount,
+      }
     })
 
     return (

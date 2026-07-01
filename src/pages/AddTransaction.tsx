@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 import type { TransactionType, AppUser, ExpenseTransaction } from '../types/types'
-import {useTransactions} from '../context/TransactionsContext'
+import { useTransactions } from '../context/TransactionsContext'
 import { getAvailableTags, getAvailableUsersIds } from '../utils/transactions'
 import TransactionTypeSwitcher from '../components/transactions/TransactionTypeSwitcher'
 import ExpenseForm from '../components/transactions/ExpenseForm'
@@ -16,7 +16,7 @@ export default function AddTransaction() {
   const navigate = useNavigate()
   const location = useLocation() // per leggere i dati della navigazione
 
-  // Definiamo un tipo per lo stato in ingresso, che potrebbe essere null se navighiamo normalmente
+  // Tipoper lo stato in ingresso, che potrebbe essere null se navighiamo normalmente
   const prefillState = location.state as {
     type?: TransactionType
     otherUserId?: string
@@ -25,20 +25,18 @@ export default function AddTransaction() {
     template?: ExpenseTransaction
   } | null
 
-  // 1. Stato per il tipo di transazione: lo impostiamo subito su "settlement" se arriviamo dal Profilo
   const [transactionType, setTransactionType] = useState<TransactionType>(
     prefillState?.type || 'expense'
   )
 
-  // 2. Dati globali necessari a entrambi i form
   const { userTransactions, knownTags, knownParticipants, isLoading } = useTransactions();
 
-  // Se l'utente non è loggato, per sicurezza redirigiamo al login
   useEffect(() => {
     if (!currentUser) {
       navigate('/auth', { replace: true })
     }
   }, [currentUser, navigate])
+
 
   // Deriviamo solo i tag e gli utenti "attivi" per popolare i form di aggiunta,
   // ignorando quelli provenienti da transazioni pending, in revisione o eliminate.
@@ -52,14 +50,13 @@ export default function AddTransaction() {
     return knownParticipants.filter(p => activeUserIds.includes(p.id))
   }, [knownParticipants, userTransactions])
 
-  // Mostriamo il fallback di caricamento mentre recuperiamo i dati in background dal context
+  // entre recuperiamo i dati in background dal context
   if (isLoading) return <FallbackState type="loading" message="Caricamento dati in corso..." />
 
-  // Mostriamo il fallback di accesso negato se l'utente non è autenticato
+  // accesso negato se l'utente non è autenticato
   if (!currentUser) return <FallbackState type="unauthorized" />
 
 
-  // Funzione di servizio: torneremo alla Home a transazione salvata
   const handleSuccess = () => {
     navigate('/home')
   }
@@ -70,26 +67,25 @@ export default function AddTransaction() {
         <h2>Aggiungi Transazione</h2>
       </header>
 
-      {/* TYPE SELECTOR: Toggle tra Spesa e Rimborso */}
-      <TransactionTypeSwitcher 
-        value={transactionType} 
-        onChange={setTransactionType} 
+      <TransactionTypeSwitcher
+        value={transactionType}
+        onChange={setTransactionType}
       />
 
       {transactionType === 'expense' ? (
-        <ExpenseForm 
-          currentUser={currentUser as AppUser} 
-          knownTags={activeKnownTags} 
-          knownParticipants={activeKnownParticipants} 
+        <ExpenseForm
+          currentUser={currentUser as AppUser}
+          knownTags={activeKnownTags}
+          knownParticipants={activeKnownParticipants}
           userTransactions={userTransactions}
           onSuccess={handleSuccess}
           templateTransaction={prefillState?.template}
           onCancel={() => navigate(-1)}
         />
       ) : (
-        <SettlementForm 
-          currentUser={currentUser as AppUser} 
-          knownParticipants={activeKnownParticipants} 
+        <SettlementForm
+          currentUser={currentUser as AppUser}
+          knownParticipants={activeKnownParticipants}
           onSuccess={handleSuccess}
           initialOtherUserId={prefillState?.otherUserId}
           initialAmount={prefillState?.amount}

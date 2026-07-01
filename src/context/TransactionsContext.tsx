@@ -22,7 +22,7 @@ const TransactionsContext = createContext<TransactionContextType | null>(null);
 
 // Componente che contiene tutta la logica
 export function TransactionProvider({ children }: { children: React.ReactNode }) {
-    const {currentUser} = useAuth(); 
+    const { currentUser } = useAuth();
 
     // stati per conservare i dati
     const [userTransactions, setTransactions] = useState<Transaction[]>([]);
@@ -31,15 +31,16 @@ export function TransactionProvider({ children }: { children: React.ReactNode })
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect( () => {
-       // Se non c'è un utente loggato, resettiamo tutto e interrompiamo.
+    useEffect(() => {
+        // Se non c'è un utente loggato, resettiamo tutto e interrompiamo.
+        // Così i dati dell'utente A non rimangono in memoria se l'utente B fa il login sullo stesso PC.
         if (!currentUser) {
             setTransactions([]);
             setKnownTags([]);
             setKnownParticipants([]);
             setIsLoading(false);
             return;
-        } 
+        }
         // avvio caricamento dati
         setIsLoading(true);
 
@@ -49,7 +50,7 @@ export function TransactionProvider({ children }: { children: React.ReactNode })
             // funzione chiamata una volta ottenute le transazioni
             async (fetchedTransactions) => {
                 setTransactions(fetchedTransactions);
-                
+
                 try {
                     const tagIds = getAllInvolvedTagIds(fetchedTransactions); // senza filtrare per quelle active
                     const userIds = getAllInvolvedUserIds(fetchedTransactions); // senza filtrare per quelle active
@@ -84,7 +85,7 @@ export function TransactionProvider({ children }: { children: React.ReactNode })
 
     return (
         <TransactionsContext.Provider value={{ userTransactions, knownTags, knownParticipants, isLoading, error }}>
-        {children}
+            {children}
         </TransactionsContext.Provider>
     );
 }
@@ -92,7 +93,7 @@ export function TransactionProvider({ children }: { children: React.ReactNode })
 
 // custom hook per comodità
 export function useTransactions() {
-  const context = useContext(TransactionsContext);
-  if (!context) throw new Error("useTransactions deve essere usato dentro un TransactionsProvider");
-  return context;
+    const context = useContext(TransactionsContext);
+    if (!context) throw new Error("useTransactions deve essere usato dentro un TransactionsProvider");
+    return context;
 }

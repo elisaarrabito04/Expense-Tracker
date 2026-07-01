@@ -37,7 +37,7 @@ export default function TransactionList({
     <section className="transaction-list">
       {transactions.map((transaction) => (
         <TransactionCard
-          key={transaction.id}
+          key={transaction.id} // per virtual dom (Quando la lista si aggiorna la key permette a React di capire esattamente quale elemento è cambiato)
           tx={transaction}
           users={users} // per i nomi
           tags={tags} // per le labels

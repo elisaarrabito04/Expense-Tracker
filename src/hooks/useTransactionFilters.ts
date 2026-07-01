@@ -12,7 +12,7 @@ export function useTransactionFilters(
   transactions: Transaction[],
   currentUserId?: string
 ) {
-  
+
   // stati dei filtri
   const [movementFilter, setMovementFilter] = useState<MovementFilter>('all')
   const [selectedTag, setSelectedTag] = useState<string>('all')
@@ -54,7 +54,7 @@ export function useTransactionFilters(
     onFromDateChange: setFromDate,
     onToDateChange: setToDate,
     onStatusChange: setStatusFilter,
-    onClearAll: () => { // attualmente inusato credo
+    onClearAll: () => { // attualmente inusato
       setMovementFilter('all')
       setSelectedTag('all')
       setSelectedPersonIds([])

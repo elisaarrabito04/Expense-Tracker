@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 type OutsideClickEvent = MouseEvent | TouchEvent
 
 export function useClickOutside<T extends HTMLElement>(
-  ref: React.RefObject<T | null>,
+  ref: React.RefObject<T | null>, // containerRef (nel cui .current ci sarà il reale elemento HTML)
   onClickOutside: () => void,
   enabled: boolean = true
 ) {
@@ -24,7 +24,7 @@ export function useClickOutside<T extends HTMLElement>(
 
       // Se il nodo cliccato NON è contenuto nel nostro elemento,
       // allora siamo fuori e chiamiamo la callback.
-      if (!ref.current.contains(targetNode)) {
+      if (!ref.current.contains(targetNode)) { // current è la proprietá dell'object Ref, che punta al nodo DOM reale dell'elemento a cui abbiamo associato la ref.
         onClickOutside()
       }
     }

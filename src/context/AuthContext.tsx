@@ -6,8 +6,8 @@ import { ensureAppUserFromAuth } from '../services/usersService'
 import type { AppUser } from '../types/types'
 
 type AuthContextType = {
-  firebaseUser: FirebaseUser | null
-  currentUser: AppUser | null
+  firebaseUser: FirebaseUser | null // auth Firebase
+  currentUser: AppUser | null // user applicativo Firestore
   loading: boolean
 }
 
